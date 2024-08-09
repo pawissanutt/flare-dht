@@ -1,0 +1,34 @@
+syntax = "proto3";
+package flare;
+
+service FlareKv {
+  rpc get (SingleKeyRequest) returns (ValueResponse);
+  rpc delete (SingleKeyRequest) returns (EmptyResponse);
+  rpc set (SetRequest) returns (EmptyResponse);
+  rpc clean (CleanRequest) returns (CleanResponse);
+}
+
+message SingleKeyRequest {
+  string key = 1;
+}
+
+message SetRequest {
+  string key = 1;
+  bytes value = 2;
+}
+
+message EmptyResponse {
+
+}
+
+message ValueResponse {
+  string key = 1;
+  bytes value = 2;
+}
+
+message CleanRequest {
+
+}
+message CleanResponse {
+  uint64 count = 1;
+}

@@ -1,0 +1,9 @@
+== TODOs
+
+* [*] sharding KV store
+* [ ] distributed shards
+* [ ] member discovery
+* [ ] shard rebalancing
+* [ ] more APIs
+** [ ] lock
+* [ ] transaction support

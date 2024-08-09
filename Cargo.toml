@@ -1,0 +1,24 @@
+[package]
+name = "flare-dht"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dashmap = "6.0"
+mur3 = "0.1.0"
+prost = "0.13"
+prost-types = "0.13"
+tonic = "0.12"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+raft = "0.7"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+tsid = "0.3"
+slog = "2.7"
+slog-term = { version = "2.9.0" }
+slog-async = "2.8.0"
+
+[build-dependencies]
+tonic-build = "0.12"

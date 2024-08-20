@@ -1,0 +1,27 @@
+syntax = "proto3";
+package flare;
+import "flare-kv.proto";
+
+service FlareRaft {
+  rpc Vote(ByteWrapper) returns (ByteWrapper);
+  rpc Snapshot(ByteWrapper) returns (ByteWrapper);
+  rpc Append(ByteWrapper) returns (ByteWrapper);
+}
+
+
+service FlareControl {
+  rpc Join(JoinRequest) returns (JoinResponse);
+  rpc GetTopology(GetTopologyRequest) returns (TopologyResponse);
+}
+
+message ByteWrapper {
+  bytes data = 1;
+  int64 shard_id = 2;
+}
+
+message JoinRequest {
+  uint64 node_id = 1;
+}
+message JoinResponse {
+  uint64 node_id = 1;
+}

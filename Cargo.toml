@@ -3,6 +3,9 @@ name = "flare-dht"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+
+
 [dependencies]
 dashmap = "6.0"
 mur3 = "0.1.0"
@@ -10,15 +13,19 @@ prost = "0.13"
 prost-types = "0.13"
 tonic = "0.12"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-raft = "0.7"
+openraft = { version = "0.9.13", features = ["serde", "storage-v2"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+clap = "4.5.14"
+deser = "0.8.0"
+serde = { version = "1.0.205", features = ["derive"] }
+serde_json = "1.0.125"
+rkyv = "0.7.44"
+bincode = { version = "2.0.0-rc.3", features = ["serde"] }
+thiserror = "1.0.63"
 
 [dev-dependencies]
 tsid = "0.3"
-slog = "2.7"
-slog-term = { version = "2.9.0" }
-slog-async = "2.8.0"
 
 [build-dependencies]
 tonic-build = "0.12"

@@ -1,5 +1,5 @@
 use flare::flare_kv_client::FlareKvClient;
-use crate::flare::{GetRequest, SetRequest};
+use crate::flare::{SingleKeyRequest, SetRequest};
 
 pub mod flare {
     tonic::include_proto!("flare"); // The string specified here must match the proto package name
@@ -11,15 +11,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let request = tonic::Request::new(SetRequest {
         key: "Tonic".into(),
-        value: "test".into()
+        value: "test".into(),
+        collection: "test".into()
     });
 
     let response = client.set(request).await?;
     println!("RESPONSE={:?}", response);
 
 
-    let request = tonic::Request::new(GetRequest {
+    let request = tonic::Request::new(SingleKeyRequest {
         key: "Tonic".into(),
+        collection: "test".into()
     });
 
     let response = client.get(request).await?;

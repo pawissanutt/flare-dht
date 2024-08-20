@@ -1,91 +1,56 @@
+extern crate core;
+
 use std::error::Error;
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use tonic::{Request, Response, Status};
+use std::net::SocketAddr;
+use clap::Parser;
+use cluster::{FlareNode, MapDescriptor};
+use flare_dht::FlareOptions;
+use network::raft_api::FlareRaftService;
 use tonic::transport::Server;
-use tracing::{debug, info};
+use tracing::info;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 use tracing_subscriber::util::SubscriberInitExt;
-use flare::flare_kv_server::FlareKv;
-use crate::dht::{LocalStore};
-use crate::flare::{CleanRequest, CleanResponse, EmptyResponse,  SetRequest, SingleKeyRequest, ValueResponse};
-use crate::flare::flare_kv_server::FlareKvServer;
+use types::flare::flare_raft_server::FlareRaftServer;
+use crate::types::flare::flare_kv_server::FlareKvServer;
+use crate::network::kv_api::FlareKvService;
 
 mod dht;
 mod discovery;
+mod network;
+mod types;
+mod store;
+mod raft;
+mod shard;
+mod util;
+mod cluster;
 
-pub mod flare {
-    tonic::include_proto!("flare"); // The string specified here must match the proto package name
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    let options = FlareOptions::parse();
+    init_log();
+    info!("use option {options:?}");
+    if options.leader {
+
+    }
+    let node = FlareNode::new_leader(
+        options.clone(), 
+        vec![MapDescriptor{name:"test".into(), shard_ids: vec![0]}]
+    );
+    let kv = FlareKvService::new(&node);
+    let mgnt = FlareRaftService::new(&node);
+
+    let socket: SocketAddr = options.addr.parse()?;
+    info!("start on {}", socket);
+    Server::builder()
+        .add_service(FlareKvServer::new(kv))
+        .add_service(FlareRaftServer::new(mgnt))
+        .serve(socket)
+        .await?;
+
+    Ok(())
 }
 
-pub struct FlareKvService {
-    store: Arc<RwLock<LocalStore>>,
-}
 
-impl FlareKvService {
-    fn new(store: Arc<RwLock<LocalStore>>) -> FlareKvService {
-        FlareKvService {
-            store
-        }
-    }
-}
-
-#[tonic::async_trait]
-impl FlareKv for FlareKvService {
-    async fn get(&self, request: Request<SingleKeyRequest>) -> Result<Response<ValueResponse>, Status> {
-        let store_cloned = self.store.clone();
-        let store = store_cloned.read().await;
-        let key = request.into_inner().key;
-        let shard = store.get_shard(&key);
-        debug!("receive get request on '{}'", key);
-        match shard.get(&key) {
-            None => Err(Status::not_found("not found")),
-            Some(value) => Ok(Response::new(ValueResponse {
-                key,
-                value,
-            }))
-        }
-    }
-
-    async fn delete(&self, request: Request<SingleKeyRequest>) -> Result<Response<EmptyResponse>, Status> {
-        let store_cloned = self.store.clone();
-        let store = store_cloned.read().await;
-        let set_request = request.into_inner();
-        let key = set_request.key;
-        let shard = store.get_shard(&key);
-        debug!("receive delete request on '{}'", key);
-        shard.delete(&key);
-
-        Ok(Response::new(EmptyResponse::default()))
-    }
-
-    async fn set(&self, request: Request<SetRequest>) -> Result<Response<EmptyResponse>, Status> {
-        let store_cloned = self.store.clone();
-        let store = store_cloned.read().await;
-        let set_request = request.into_inner();
-        let key = set_request.key;
-        let shard = store.get_shard(&key);
-        let val = set_request.value;
-        debug!("receive set request on '{}'", key);
-        shard.set(key, val);
-
-        Ok(Response::new(EmptyResponse::default()))
-    }
-
-    async fn clean(&self, _request: Request<CleanRequest>) -> Result<Response<CleanResponse>, Status> {
-        let store_cloned = self.store.clone();
-        let mut store = store_cloned.write().await;
-        let mut count: u64 = 0;
-        debug!("receive clean request");
-        for s in store.iter_mut_shards() {
-            count += s.count() as u64;
-            s.clean();
-        }
-        Ok(Response::new(CleanResponse{
-            count,
-        }))
-    }
-}
 
 fn init_log(){
     let subscriber = FmtSubscriber::builder()
@@ -97,18 +62,3 @@ fn init_log(){
 
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
-    init_log();
-    let addr = "[::1]:50051".parse()?;
-    let store = Arc::new(RwLock::new(LocalStore::new()));
-    let kv = FlareKvService::new(store);
-
-    info!("start on {addr}");
-    Server::builder()
-        .add_service(FlareKvServer::new(kv))
-        .serve(addr)
-        .await?;
-
-    Ok(())
-}

@@ -1,0 +1,17 @@
+== Raft
+https://docs.rs/raft/latest/raft/
+
+* new
++
+----
+let storage = MemStorage::new_with_conf_state((vec![1], vec![]));
+let mut node = RawNode::new(&config, storage, &logger).unwrap();
+----
+
+* propose:
++
+----
+raft_group.propose(vec![], data)
+----
+
+*

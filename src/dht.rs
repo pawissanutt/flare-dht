@@ -4,7 +4,7 @@ use dashmap::DashMap;
 use mur3::Hasher32;
 use tracing::warn;
 
-#[derive(Debug)]
+
 pub struct ShardedStore {
     map: DashMap<String, Vec<u8>>
 }
@@ -21,6 +21,10 @@ impl ShardedStore {
     }
 
     pub fn set(&self, key: String, value: Vec<u8>) {
+        self.map.insert(key, value);
+    }
+
+    pub async fn set_async(&self, key: String, value: Vec<u8>) {
         self.map.insert(key, value);
     }
 

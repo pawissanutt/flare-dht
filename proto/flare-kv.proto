@@ -2,19 +2,35 @@ syntax = "proto3";
 package flare;
 
 service FlareKv {
-  rpc get (SingleKeyRequest) returns (ValueResponse);
-  rpc delete (SingleKeyRequest) returns (EmptyResponse);
-  rpc set (SetRequest) returns (EmptyResponse);
-  rpc clean (CleanRequest) returns (CleanResponse);
+  rpc Get (SingleKeyRequest) returns (ValueResponse);
+  rpc Delete (SingleKeyRequest) returns (EmptyResponse);
+  rpc Set (SetRequest) returns (EmptyResponse);
+  rpc Clean (CleanRequest) returns (CleanResponse);
+  rpc GetTopology(GetTopologyRequest) returns (TopologyResponse);
+  rpc WatchTopology(GetTopologyRequest) returns (stream TopologyResponse);
+  rpc CreateCollection(CreateCollectionRequest) returns (CreateCollectionResponse);
 }
+
+message GetTopologyRequest {
+  repeated string collection = 1;
+}
+
+message TopologyResponse {
+  string collection = 1;
+  uint32 seed = 2;
+  uint32 total = 3;
+}
+
 
 message SingleKeyRequest {
   string key = 1;
+  string collection = 2;
 }
 
 message SetRequest {
   string key = 1;
   bytes value = 2;
+  string collection = 3;
 }
 
 message EmptyResponse {
@@ -27,8 +43,18 @@ message ValueResponse {
 }
 
 message CleanRequest {
-
+  string collection = 1;
 }
+
 message CleanResponse {
   uint64 count = 1;
+}
+
+message CreateCollectionRequest{
+  string collection = 1;
+  int32 shard_count = 2;
+}
+
+message CreateCollectionResponse {
+  string collection = 1;
 }

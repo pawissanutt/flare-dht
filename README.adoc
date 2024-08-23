@@ -1,0 +1,15 @@
+== Flare DHT
+
+=== TODOs
+* [*] sharding KV store
+* [*] Raft protocol
+* [*] join mechanism
+* [ ] distributed shards
+* [ ] member discovery
+* [ ] shard rebalancing
+* [ ] more APIs
+** [ ] lock
+* [ ] client SDK
+* [ ] transaction support
+* [ ] testing
+** [ ] Kubernetes Deployment

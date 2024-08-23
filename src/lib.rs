@@ -1,23 +1,48 @@
 use clap::Parser;
 
-mod dht;
 mod discovery;
 mod network;
 mod types;
-mod store;
 mod raft;
 mod shard;
 mod util;
 mod cluster;
+mod metadata;
+#[cfg(test)]
+mod test;
 
+pub mod proto {
+    tonic::include_proto!("flare"); // The string specified here must match the proto package name
+}
 
 #[derive(Parser, Clone, Debug)]
 #[clap(author, version, about, long_about = None)]
 pub struct FlareOptions{
-    pub addr: String,
+    pub addr: Option<String>,
+    #[arg(short, long, default_value="8001")]
+    pub port: u16,
     #[arg(short, long)]
     pub leader: bool,
+    #[arg(long)]
+    pub peer_addr: Option<String>,
     #[arg(short, long)]
-    pub peer_addr: String,
-    
+    pub node_id: Option<u64>,
+}
+
+impl FlareOptions {
+    pub fn get_node_id(&self) -> u64 {
+        if let Some(id) = self.node_id {
+            id
+        } else {
+            rand::random()
+        }
+    }
+
+    pub fn get_addr(&self) -> String {
+        if let Some(addr) = &self.addr {
+            addr.clone()
+        } else {
+            format!("http://127.0.0.1:{}", self.port)
+        }
+    }
 }

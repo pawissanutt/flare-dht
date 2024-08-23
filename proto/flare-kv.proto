@@ -6,8 +6,8 @@ service FlareKv {
   rpc Delete (SingleKeyRequest) returns (EmptyResponse);
   rpc Set (SetRequest) returns (EmptyResponse);
   rpc Clean (CleanRequest) returns (CleanResponse);
-  rpc GetTopology(GetTopologyRequest) returns (TopologyResponse);
-  rpc WatchTopology(GetTopologyRequest) returns (stream TopologyResponse);
+  rpc GetTopology(GetTopologyRequest) returns (TopologyInfo);
+  rpc WatchTopology(GetTopologyRequest) returns (stream TopologyInfo);
   rpc CreateCollection(CreateCollectionRequest) returns (CreateCollectionResponse);
 }
 
@@ -15,7 +15,7 @@ message GetTopologyRequest {
   repeated string collection = 1;
 }
 
-message TopologyResponse {
+message TopologyInfo {
   string collection = 1;
   uint32 seed = 2;
   uint32 total = 3;

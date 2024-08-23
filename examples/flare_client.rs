@@ -7,12 +7,12 @@ pub mod flare {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut client = FlareKvClient::connect("http://[::1]:50051").await?;
+    let mut client = FlareKvClient::connect("http://127.0.0.1:8001").await?;
 
     let request = tonic::Request::new(SetRequest {
         key: "Tonic".into(),
         value: "test".into(),
-        collection: "test".into()
+        collection: "default".into()
     });
 
     let response = client.set(request).await?;
@@ -21,7 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let request = tonic::Request::new(SingleKeyRequest {
         key: "Tonic".into(),
-        collection: "test".into()
+        collection: "default".into()
     });
 
     let response = client.get(request).await?;

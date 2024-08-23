@@ -3,8 +3,8 @@ use dashmap::DashMap;
 use tonic::{Request, Response, Status};
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
 use crate::shard::FlareShard;
-use crate::types::flare::{EmptyResponse, CleanResponse, ValueResponse, SingleKeyRequest, SetRequest, CleanRequest, GetTopologyRequest, TopologyResponse, CreateCollectionRequest, CreateCollectionResponse};
-use crate::types::flare::flare_kv_server::FlareKv;
+use crate::proto::{EmptyResponse, CleanResponse, ValueResponse, SingleKeyRequest, SetRequest, CleanRequest, GetTopologyRequest, CreateCollectionRequest, CreateCollectionResponse, TopologyInfo};
+use crate::proto::flare_kv_server::FlareKv;
 use crate::types::{RaftRequest, ShardId};
 use crate::cluster::{FlareNode, MapDescriptor};
 
@@ -69,11 +69,11 @@ impl FlareKv for FlareKvService {
         todo!()
     }
 
-    async fn get_topology(&self, request: Request<GetTopologyRequest>) -> Result<Response<TopologyResponse>, Status> {
+    async fn get_topology(&self, request: Request<GetTopologyRequest>) -> Result<Response<TopologyInfo>, Status> {
         todo!()
     }
 
-    type WatchTopologyStream = ReceiverStream<Result<TopologyResponse, Status>>;
+    type WatchTopologyStream = ReceiverStream<Result<TopologyInfo, Status>>;
 
     async fn watch_topology(&self, request: Request<GetTopologyRequest>) -> Result<Response<Self::WatchTopologyStream>, Status> {
         todo!()

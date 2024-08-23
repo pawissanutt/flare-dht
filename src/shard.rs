@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use openraft::Config;
 use crate::raft::Network;
-use crate::store::StateMachineStore;
-use crate::store::log::LogStore;
+use crate::raft::store::StateMachineStore;
+use crate::raft::log::LogStore;
 use crate::types::{NodeId, Raft, ShardId, TypeConfig};
 
 
@@ -14,7 +14,7 @@ pub struct FlareShard{
     pub raft: Raft,
     pub log_store: LogStore<TypeConfig>,
     pub state_machine_store: Arc<StateMachineStore>,
-    pub config: Arc<openraft::Config>,
+    pub config: Arc<Config>,
 }
 
 impl FlareShard {

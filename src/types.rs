@@ -5,9 +5,7 @@ use std::io::Cursor;
 
 pub type ShardId = i64;
 
-pub mod flare {
-    tonic::include_proto!("flare"); // The string specified here must match the proto package name
-}
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum RaftRequest {

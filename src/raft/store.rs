@@ -1,28 +1,22 @@
-pub(crate) mod log;
-
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::io::Cursor;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
-use bincode::{config, Decode, Encode};
 use openraft::{BasicNode, Entry, EntryPayload, LogId, RaftSnapshotBuilder, RaftTypeConfig, Snapshot, SnapshotMeta, StorageError, StorageIOError, StoredMembership, Vote};
 use openraft::storage::RaftStateMachine;
-use serde::{Deserialize, Serialize};
 use crate::types::{NodeId, RaftRequest, RaftResponse, TypeConfig};
+use rancor::Error;
+
 
 
 #[derive(Debug)]
 pub struct StoredSnapshot {
     pub meta: SnapshotMeta<NodeId, BasicNode>,
-
     pub data: Vec<u8>,
 }
 
-
-#[derive(Clone)]
-struct HashStore(Arc<RwLock<HashMap<u64, String>>>);
-
-#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+// #[derive(Serialize, Deserialize, Debug, Default, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct StateMachineData {
     pub last_applied_log: Option<LogId<NodeId>>,
     pub last_membership: StoredMembership<NodeId, BasicNode>,
@@ -31,7 +25,8 @@ pub struct StateMachineData {
     pub data: DataWrapper,
 }
 
-#[derive(Encode, Decode, Serialize, Deserialize, Debug, Default, Clone)]
+#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Debug, Default, Clone)]
+#[rkyv(compare(PartialEq),check_bytes,derive(Debug))]
 pub struct DataWrapper(pub(crate) BTreeMap<String, Vec<u8>>);
 
 #[derive(Debug, Default)]
@@ -55,8 +50,12 @@ impl RaftSnapshotBuilder<TypeConfig> for Arc<StateMachineStore> {
     async fn build_snapshot(&mut self) -> Result<Snapshot<TypeConfig>, StorageError<NodeId>> {
         // Serialize the data of the state machine.
         let state_machine = self.state_machine.read().await;
-        let data = bincode::encode_to_vec(&state_machine.data, config::standard())
+        let data = rkyv::api::high::to_bytes_in::<_,Error>(&state_machine.data, Vec::new())
             .map_err(|e| StorageIOError::read_state_machine(&e))?;
+        
+        // let mut serializer = AllocSerializer::<0>::default();
+        // serializer.serialize_value(&state_machine.data).unwrap();
+        // let data: Vec<u8> = serializer.into_serializer().into_inner();
 
         let last_applied_log = state_machine.last_applied_log;
         let last_membership = state_machine.last_membership.clone();
@@ -167,17 +166,17 @@ impl RaftStateMachine<TypeConfig> for Arc<StateMachineStore> {
             meta: meta.clone(),
             data: snapshot.into_inner(),
         };
+        
+        
+        let updated_state_machine_data: DataWrapper = 
+            rkyv::api::high::from_bytes::<DataWrapper,Error>(&new_snapshot.data[..])
+            .map_err(|e| StorageIOError::read_snapshot(Some(new_snapshot.meta.signature()), &e))?;
 
-
-        // Update the state machine.
-        let updated_state_machine_data =
-            bincode::decode_from_slice(&new_snapshot.data[..], config::standard())
-                .map_err(|e| StorageIOError::read_snapshot(Some(new_snapshot.meta.signature()), &e))?;
 
         let updated_state_machine = StateMachineData {
             last_applied_log: meta.last_log_id,
             last_membership: meta.last_membership.clone(),
-            data: updated_state_machine_data.0,
+            data: updated_state_machine_data,
         };
         let mut state_machine = self.state_machine.write().await;
         *state_machine = updated_state_machine;

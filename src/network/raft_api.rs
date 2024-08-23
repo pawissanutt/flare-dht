@@ -4,8 +4,8 @@ use dashmap::DashMap;
 use tonic::{Request, Response, Status};
 use crate::cluster::FlareNode;
 use crate::shard::FlareShard;
-use crate::types::flare::ByteWrapper;
-use crate::types::flare::flare_raft_server::FlareRaft;
+use crate::proto::ByteWrapper;
+use crate::proto::flare_raft_server::FlareRaft;
 use crate::types::ShardId;
 use crate::util::{encode, decode};
 

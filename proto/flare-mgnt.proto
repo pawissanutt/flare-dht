@@ -1,6 +1,5 @@
 syntax = "proto3";
 package flare;
-import "flare-kv.proto";
 
 service FlareRaft {
   rpc Vote(ByteWrapper) returns (ByteWrapper);
@@ -11,7 +10,7 @@ service FlareRaft {
 
 service FlareControl {
   rpc Join(JoinRequest) returns (JoinResponse);
-  rpc GetTopology(GetTopologyRequest) returns (TopologyResponse);
+  rpc GetTopology(ClusterTopologyRequest) returns (ClusterTopologyInfo);
 }
 
 message ByteWrapper {
@@ -21,7 +20,22 @@ message ByteWrapper {
 
 message JoinRequest {
   uint64 node_id = 1;
+  string addr = 2;
 }
+
 message JoinResponse {
-  uint64 node_id = 1;
+}
+
+message ClusterTopologyRequest {
+}
+
+message ClusterTopologyInfo {
+  map<uint64, string> node_addr = 1;
+  map<int64, ShardTopologyInfo> shards = 2;
+}
+
+message ShardTopologyInfo {
+  uint64 leader = 1;
+  repeated uint64 voters = 2;
+  repeated uint64 learners = 3;
 }

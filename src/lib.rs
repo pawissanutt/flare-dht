@@ -1,15 +1,14 @@
 use clap::Parser;
 
-mod discovery;
-mod network;
-mod types;
-mod raft;
-mod shard;
-mod util;
 mod cluster;
+mod kv;
 mod metadata;
+mod raft;
+mod rpc_server;
+mod shard;
 #[cfg(test)]
 mod test;
+mod util;
 
 pub mod proto {
     tonic::include_proto!("flare"); // The string specified here must match the proto package name
@@ -17,10 +16,12 @@ pub mod proto {
 
 #[derive(Parser, Clone, Debug)]
 #[clap(author, version, about, long_about = None)]
-pub struct FlareOptions{
+pub struct FlareOptions {
     pub addr: Option<String>,
-    #[arg(short, long, default_value="8001")]
+    #[arg(short, long, default_value = "8001")]
     pub port: u16,
+    #[arg(short, long, default_value = "18001")]
+    pub raft_port: u16,
     #[arg(short, long)]
     pub leader: bool,
     #[arg(long)]
@@ -38,11 +39,12 @@ impl FlareOptions {
         }
     }
 
-    pub fn get_addr(&self) -> String {
+    pub fn get_peer_addr(&self) -> String {
         if let Some(addr) = &self.addr {
             addr.clone()
         } else {
-            format!("http://127.0.0.1:{}", self.port)
+            // format!("http://127.0.0.1:{}", self.port)
+            format!("127.0.0.1:{}", self.raft_port)
         }
     }
 }

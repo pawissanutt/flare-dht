@@ -7,7 +7,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build_client(true)
         .build_server(true)
         .file_descriptor_set_path(out_dir.join("flare_descriptor.bin"))
-        .compile(&["proto/flare-kv.proto", "proto/flare-mgnt.proto"], &["proto/"])?;
+        .compile(
+            &[
+                "proto/flare-common.proto",
+                "proto/flare-kv.proto",
+                "proto/flare-mgnt.proto",
+            ],
+            &["proto/"],
+        )?;
     // tonic_build::compile_protos("proto/flare-mgnt.proto")?;
     Ok(())
 }

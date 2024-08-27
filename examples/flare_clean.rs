@@ -1,5 +1,5 @@
+use crate::flare::CleanRequest;
 use flare::flare_kv_client::FlareKvClient;
-use crate::flare::{CleanRequest};
 
 pub mod flare {
     tonic::include_proto!("flare"); // The string specified here must match the proto package name

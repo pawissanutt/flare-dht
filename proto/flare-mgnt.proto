@@ -1,6 +1,8 @@
 syntax = "proto3";
 package flare;
 
+import "flare-common.proto";
+
 service FlareRaft {
   rpc Vote(ByteWrapper) returns (ByteWrapper);
   rpc Snapshot(ByteWrapper) returns (ByteWrapper);
@@ -11,11 +13,12 @@ service FlareRaft {
 service FlareControl {
   rpc Join(JoinRequest) returns (JoinResponse);
   rpc GetTopology(ClusterTopologyRequest) returns (ClusterTopologyInfo);
+  rpc GetMetadata(ClusterMetadataRequest) returns (ClusterMetadata);
 }
 
 message ByteWrapper {
   bytes data = 1;
-  int64 shard_id = 2;
+  uint64 shard_id = 2;
 }
 
 message JoinRequest {
@@ -38,4 +41,14 @@ message ShardTopologyInfo {
   uint64 leader = 1;
   repeated uint64 voters = 2;
   repeated uint64 learners = 3;
+}
+
+message ClusterMetadataRequest {
+
+}
+
+message ClusterMetadata {
+  map<string, CollectionMetadata> collections = 1;
+  map<uint64, ShardMetadata> shards = 2;
+  uint64 last_shard_id = 3;
 }

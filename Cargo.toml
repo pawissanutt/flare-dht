@@ -3,6 +3,9 @@ name = "flare-dht"
 version = "0.1.0"
 edition = "2021"
 
+# [profile.release]
+# lto = true
+
 [features]
 
 
@@ -14,6 +17,7 @@ prost-types = "0.13"
 tonic = { version = "0.12", features = ["server"]}
 tonic-reflection = { version = "0.12",features = ["server"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tokio-serde = {version = "0.9", features = ["bincode"]}
 openraft = { version = "0.9.13", features = ["serde", "storage-v2"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -21,11 +25,13 @@ clap = "4.5.14"
 deser = "0.8.0"
 serde = { version = "1.0.205", features = ["derive"] }
 serde_json = "1.0.125"
-rkyv = { version = "0.8.0-alpha.3", features = ["alloc"] }
+rkyv = { version = "0.8.0-alpha.3", features = ["alloc", "hashbrown"] }
 bincode = { version = "2.0.0-rc.3", features = ["serde"] }
 thiserror = "1.0.63"
 rancor = "0.1.0-alpha.10"
 rand = "0.8"
+tarpc = { version = "0.34", features = ["tokio1", "serde-transport", "tcp", "serde-transport-bincode"] }
+futures = "0.3"
 
 [dev-dependencies]
 tsid = "0.3"

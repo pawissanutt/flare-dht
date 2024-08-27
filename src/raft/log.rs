@@ -1,14 +1,13 @@
+use openraft::storage::{LogFlushed, RaftLogStorage};
+use openraft::{LogId, LogState, RaftLogId, RaftLogReader, RaftTypeConfig, StorageError, Vote};
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::ops::RangeBounds;
 use std::sync::Arc;
-use openraft::{LogId, LogState, RaftLogId, RaftLogReader, RaftTypeConfig, StorageError, Vote};
-use openraft::storage::{LogFlushed, RaftLogStorage};
 use tokio::sync::Mutex;
 
-
 #[derive(Clone, Debug, Default)]
-pub struct LogStore<C: RaftTypeConfig> {
+pub struct MemLogStore<C: RaftTypeConfig> {
     inner: Arc<Mutex<LogStoreInner<C>>>,
 }
 
@@ -43,12 +42,20 @@ impl<C: RaftTypeConfig> LogStoreInner<C> {
     where
         C::Entry: Clone,
     {
-        let response = self.log.range(range.clone()).map(|(_, val)| val.clone()).collect::<Vec<_>>();
+        let response = self
+            .log
+            .range(range.clone())
+            .map(|(_, val)| val.clone())
+            .collect::<Vec<_>>();
         Ok(response)
     }
 
     async fn get_log_state(&mut self) -> Result<LogState<C>, StorageError<C::NodeId>> {
-        let last = self.log.iter().next_back().map(|(_, ent)| *ent.get_log_id());
+        let last = self
+            .log
+            .iter()
+            .next_back()
+            .map(|(_, ent)| *ent.get_log_id());
 
         let last_purged = self.last_purged_log_id;
 
@@ -63,12 +70,17 @@ impl<C: RaftTypeConfig> LogStoreInner<C> {
         })
     }
 
-    async fn save_committed(&mut self, committed: Option<LogId<C::NodeId>>) -> Result<(), StorageError<C::NodeId>> {
+    async fn save_committed(
+        &mut self,
+        committed: Option<LogId<C::NodeId>>,
+    ) -> Result<(), StorageError<C::NodeId>> {
         self.committed = committed;
         Ok(())
     }
 
-    async fn read_committed(&mut self) -> Result<Option<LogId<C::NodeId>>, StorageError<C::NodeId>> {
+    async fn read_committed(
+        &mut self,
+    ) -> Result<Option<LogId<C::NodeId>>, StorageError<C::NodeId>> {
         Ok(self.committed)
     }
 
@@ -81,8 +93,14 @@ impl<C: RaftTypeConfig> LogStoreInner<C> {
         Ok(self.vote)
     }
 
-    async fn append<I>(&mut self, entries: I, callback: LogFlushed<C>) -> Result<(), StorageError<C::NodeId>>
-    where I: IntoIterator<Item = C::Entry> {
+    async fn append<I>(
+        &mut self,
+        entries: I,
+        callback: LogFlushed<C>,
+    ) -> Result<(), StorageError<C::NodeId>>
+    where
+        I: IntoIterator<Item = C::Entry>,
+    {
         // Simple implementation that calls the flush-before-return `append_to_log`.
         for entry in entries {
             let x = entry.get_log_id();
@@ -94,7 +112,11 @@ impl<C: RaftTypeConfig> LogStoreInner<C> {
     }
 
     async fn truncate(&mut self, log_id: LogId<C::NodeId>) -> Result<(), StorageError<C::NodeId>> {
-        let keys = self.log.range(log_id.index..).map(|(k, _v)| *k).collect::<Vec<_>>();
+        let keys = self
+            .log
+            .range(log_id.index..)
+            .map(|(k, _v)| *k)
+            .collect::<Vec<_>>();
         for key in keys {
             self.log.remove(&key);
         }
@@ -110,7 +132,11 @@ impl<C: RaftTypeConfig> LogStoreInner<C> {
         }
 
         {
-            let keys = self.log.range(..=log_id.index).map(|(k, _v)| *k).collect::<Vec<_>>();
+            let keys = self
+                .log
+                .range(..=log_id.index)
+                .map(|(k, _v)| *k)
+                .collect::<Vec<_>>();
             for key in keys {
                 self.log.remove(&key);
             }
@@ -120,9 +146,9 @@ impl<C: RaftTypeConfig> LogStoreInner<C> {
     }
 }
 
-
-impl<C: RaftTypeConfig> RaftLogReader<C> for LogStore<C>
-where C::Entry: Clone
+impl<C: RaftTypeConfig> RaftLogReader<C> for MemLogStore<C>
+where
+    C::Entry: Clone,
 {
     async fn try_get_log_entries<RB: RangeBounds<u64> + Clone + Debug>(
         &mut self,
@@ -133,8 +159,9 @@ where C::Entry: Clone
     }
 }
 
-impl<C: RaftTypeConfig> RaftLogStorage<C> for LogStore<C>
-where C::Entry: Clone
+impl<C: RaftTypeConfig> RaftLogStorage<C> for MemLogStore<C>
+where
+    C::Entry: Clone,
 {
     type LogReader = Self;
 
@@ -157,18 +184,29 @@ where C::Entry: Clone
         inner.read_vote().await
     }
 
-    async fn save_committed(&mut self, committed: Option<LogId<C::NodeId>>) -> Result<(), StorageError<C::NodeId>> {
+    async fn save_committed(
+        &mut self,
+        committed: Option<LogId<C::NodeId>>,
+    ) -> Result<(), StorageError<C::NodeId>> {
         let mut inner = self.inner.lock().await;
         inner.save_committed(committed).await
     }
 
-    async fn read_committed(&mut self) -> Result<Option<LogId<C::NodeId>>, StorageError<C::NodeId>> {
+    async fn read_committed(
+        &mut self,
+    ) -> Result<Option<LogId<C::NodeId>>, StorageError<C::NodeId>> {
         let mut inner = self.inner.lock().await;
         inner.read_committed().await
     }
 
-    async fn append<I>(&mut self, entries: I, callback: LogFlushed<C>) -> Result<(), StorageError<C::NodeId>>
-    where I: IntoIterator<Item = C::Entry> {
+    async fn append<I>(
+        &mut self,
+        entries: I,
+        callback: LogFlushed<C>,
+    ) -> Result<(), StorageError<C::NodeId>>
+    where
+        I: IntoIterator<Item = C::Entry>,
+    {
         let mut inner = self.inner.lock().await;
         inner.append(entries, callback).await
     }

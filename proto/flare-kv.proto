@@ -51,10 +51,10 @@ message CleanResponse {
 }
 
 message CreateCollectionRequest{
-  string collection = 1;
+  string name = 1;
   int32 shard_count = 2;
 }
 
 message CreateCollectionResponse {
-  string collection = 1;
+  string name = 1;
 }

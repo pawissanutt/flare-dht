@@ -2,12 +2,10 @@ use crate::cluster::FlareNode;
 use crate::proto::flare_control_server::FlareControl;
 use crate::proto::{
     ClusterMetadata, ClusterMetadataRequest, ClusterTopologyInfo, ClusterTopologyRequest,
-    CollectionMetadata, JoinRequest, JoinResponse, ShardMetadata,
+    CollectionMetadata, JoinRequest, JoinResponse, LeaveRequest, LeaveResponse, ShardMetadata,
 };
-use openraft::docs::components::state_machine;
 use openraft::{BasicNode, ChangeMembers};
-use std::collections::{BTreeMap, HashMap};
-use std::fmt;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use tracing::info;
@@ -27,7 +25,6 @@ impl FlareControl for FlareControlService {
     async fn join(&self, request: Request<JoinRequest>) -> Result<Response<JoinResponse>, Status> {
         let join_request = request.into_inner();
         let flare_node = self.flare_node.clone();
-        let flare_node = flare_node.clone();
         info!("receive join request {}", &join_request.addr);
         let metadata_manager = flare_node.metadata_manager.clone();
         let mut map = BTreeMap::new();
@@ -59,6 +56,34 @@ impl FlareControl for FlareControlService {
         }
 
         Ok(Response::new(JoinResponse::default()))
+    }
+
+    async fn leave(
+        &self,
+        request: Request<LeaveRequest>,
+    ) -> Result<Response<LeaveResponse>, Status> {
+        let leave_req = request.into_inner();
+        let flare_node = self.flare_node.clone();
+        info!("receive join request {}", &leave_req.node_id);
+        let metadata_manager = flare_node.metadata_manager.clone();
+        let mut nodes = BTreeSet::new();
+        nodes.insert(leave_req.node_id);
+        if metadata_manager.is_voter(leave_req.node_id).await {
+            let change_members = ChangeMembers::RemoveVoters(nodes);
+            metadata_manager
+                .raft
+                .change_membership(change_members, true)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+        } else {
+            let change_members = ChangeMembers::RemoveNodes(nodes);
+            metadata_manager
+                .raft
+                .change_membership(change_members, true)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+        }
+        Ok(Response::new(LeaveResponse::default()))
     }
 
     async fn get_topology(

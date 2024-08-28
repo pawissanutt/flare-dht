@@ -16,7 +16,7 @@ prost = "0.13"
 prost-types = "0.13"
 tonic = { version = "0.12", features = ["server"]}
 tonic-reflection = { version = "0.12",features = ["server"] }
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal"] }
 tokio-serde = {version = "0.9", features = ["bincode"]}
 openraft = { version = "0.9.13", features = ["serde", "storage-v2"] }
 tracing = "0.1"

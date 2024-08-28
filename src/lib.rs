@@ -39,12 +39,12 @@ impl FlareOptions {
         }
     }
 
-    pub fn get_peer_addr(&self) -> String {
+    pub fn get_addr(&self) -> String {
         if let Some(addr) = &self.addr {
             addr.clone()
         } else {
-            // format!("http://127.0.0.1:{}", self.port)
-            format!("127.0.0.1:{}", self.raft_port)
+            format!("http://127.0.0.1:{}", self.port)
+            // format!("127.0.0.1:{}", self.raft_port)
         }
     }
 }

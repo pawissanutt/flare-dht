@@ -12,6 +12,7 @@ service FlareRaft {
 
 service FlareControl {
   rpc Join(JoinRequest) returns (JoinResponse);
+  rpc Leave(LeaveRequest) returns (LeaveResponse);
   rpc GetTopology(ClusterTopologyRequest) returns (ClusterTopologyInfo);
   rpc GetMetadata(ClusterMetadataRequest) returns (ClusterMetadata);
 }
@@ -28,6 +29,16 @@ message JoinRequest {
 
 message JoinResponse {
 }
+
+
+message LeaveRequest {
+  uint64 node_id = 1;
+}
+
+message LeaveResponse {
+}
+
+
 
 message ClusterTopologyRequest {
 }

@@ -14,10 +14,9 @@ use openraft::raft::{
     VoteRequest, VoteResponse,
 };
 use openraft::{BasicNode, RaftNetwork, RaftNetworkFactory};
-use tarpc::client::{Config, RpcError};
+use tarpc::client::Config;
 use tarpc::context;
 use tarpc::tokio_serde::formats::Bincode;
-use tonic::transport::Channel;
 
 use super::MetaTypeConfig;
 

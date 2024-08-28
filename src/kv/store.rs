@@ -4,7 +4,7 @@ use crate::raft::NodeId;
 use openraft::storage::RaftStateMachine;
 use openraft::{
     BasicNode, Entry, EntryPayload, LogId, RaftSnapshotBuilder, RaftTypeConfig, Snapshot,
-    SnapshotMeta, StorageError, StoredMembership, Vote,
+    SnapshotMeta, StorageError, StoredMembership,
 };
 use std::io::Cursor;
 use std::sync::atomic::{AtomicU64, Ordering};

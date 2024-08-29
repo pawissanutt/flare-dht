@@ -1,6 +1,8 @@
 == Flare DHT
 
-This library is still in the early stage of development.
+The learning project to recreate the in-memory data grid in Rust language.
+
+*This library is still in the early stage of development.*
 
 === Example
 

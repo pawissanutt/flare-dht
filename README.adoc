@@ -1,5 +1,7 @@
 == Flare DHT
 
+This library is still in the early stage of development.
+
 === Example
 
 [source, bash]

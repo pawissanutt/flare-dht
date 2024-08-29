@@ -1,5 +1,16 @@
 == Flare DHT
 
+=== Example
+
+[source, bash]
+----
+# start leader
+cargo run -- -p 8001 -n 0 -l
+# start other and join to leader
+cargo run -- -p 8002 -n 1 --peer-addr http://127.0.0.1:8001
+cargo run -- -p 8003 -n 2 --peer-addr http://127.0.0.1:8001
+----
+
 === TODOs
 * [*] sharding KV store
 * [*] Raft protocol
@@ -10,6 +21,7 @@
 * [ ] shard rebalancing
 * [ ] more APIs
 ** [ ] lock
+** [ ] batch (atomic?)
 * [ ] client SDK
 * [ ] transaction support
 * [ ] testing

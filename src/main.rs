@@ -19,15 +19,10 @@ use tracing::info;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
-pub mod proto {
-    tonic::include_proto!("flare"); // The string specified here must match the proto package name
-    pub(crate) const FILE_DESCRIPTOR_SET: &[u8] =
-        tonic::include_file_descriptor_set!("flare_descriptor");
-}
-
 mod cluster;
 mod kv;
 mod metadata;
+mod proto;
 mod raft;
 mod rpc_server;
 mod shard;

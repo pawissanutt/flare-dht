@@ -4,6 +4,7 @@
 * [*] sharding KV store
 * [*] Raft protocol
 * [*] join mechanism
+* [*] leave mechanism
 * [ ] distributed shards
 * [ ] member discovery
 * [ ] shard rebalancing

@@ -1,18 +1,15 @@
 use clap::Parser;
 
-mod cluster;
+pub mod cluster;
 mod kv;
 mod metadata;
+pub mod proto;
 mod raft;
-mod rpc_server;
+pub mod rpc_server;
 mod shard;
 #[cfg(test)]
 mod test;
 mod util;
-
-pub mod proto {
-    tonic::include_proto!("flare"); // The string specified here must match the proto package name
-}
 
 #[derive(Parser, Clone, Debug)]
 #[clap(author, version, about, long_about = None)]

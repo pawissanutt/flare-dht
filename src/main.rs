@@ -6,7 +6,6 @@ use crate::rpc_server::raft_api::FlareRaftService;
 use clap::Parser;
 use cluster::FlareNode;
 use flare_dht::FlareOptions;
-use futures::FutureExt;
 use proto::flare_control_server::FlareControlServer;
 use proto::flare_kv_server::FlareKvServer;
 use proto::flare_raft_server::FlareRaftServer;
@@ -44,7 +43,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //     .unwrap();
     // });
     let flare_node = shared_node.clone();
-    let flare_kv = FlareKvService::new(&flare_node);
+    let flare_kv = FlareKvService::new(shared_node.clone());
     let flare_raft_service = FlareRaftService::new(shared_node.clone());
     let flare_control = FlareControlService::new(shared_node.clone());
 

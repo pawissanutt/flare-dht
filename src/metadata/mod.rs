@@ -6,7 +6,7 @@ mod store;
 use openraft::Config;
 use state_machine::FlareMetadataSM;
 use std::str::FromStr;
-use std::{clone, io::Cursor, sync::Arc};
+use std::{io::Cursor, sync::Arc};
 use store::StateMachineStore;
 use tonic::transport::{Channel, Uri};
 use tracing::info;

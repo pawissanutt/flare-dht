@@ -1,10 +1,6 @@
-pub mod flare {
-    tonic::include_proto!("flare"); // The string specified here must match the proto package name
-}
-
-use crate::flare::flare_kv_client::FlareKvClient;
-use crate::flare::SetRequest;
-use std::time::{SystemTime, UNIX_EPOCH};
+use flare_dht::proto::flare_kv_client::FlareKvClient;
+use flare_dht::proto::SetRequest;
+use std::time::SystemTime;
 
 #[tokio::main]
 async fn main() {

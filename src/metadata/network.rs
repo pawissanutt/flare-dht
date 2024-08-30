@@ -1,4 +1,4 @@
-use crate::kv::{typ, KvTypeConfig};
+use crate::kv::typ;
 use crate::proto::flare_raft_client::FlareRaftClient;
 use crate::proto::ByteWrapper;
 use crate::raft::FlareRpcError;

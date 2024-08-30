@@ -1,9 +1,6 @@
-use crate::flare::{SetRequest, SingleKeyRequest};
-use flare::flare_kv_client::FlareKvClient;
+use flare_dht::proto::{SetRequest, SingleKeyRequest};
+use flare_dht::proto::flare_kv_client::FlareKvClient;
 
-pub mod flare {
-    tonic::include_proto!("flare"); // The string specified here must match the proto package name
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

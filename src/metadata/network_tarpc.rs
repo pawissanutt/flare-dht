@@ -4,7 +4,6 @@ use crate::kv::typ;
 use crate::raft::NodeId;
 use crate::rpc_server::raft2::FlareTarpcError::{RaftError, ShardNotFound};
 use crate::rpc_server::raft2::{FlareTarpcError, RaftRpcClient};
-use crate::shard::ShardId;
 use openraft::error::{
     Infallible, InstallSnapshotError, NetworkError, RPCError, RemoteError, Unreachable,
 };
@@ -30,7 +29,6 @@ impl RaftNetworkFactory<MetaTypeConfig> for TarpcNetwork {
 
     async fn new_client(&mut self, target: NodeId, node: &BasicNode) -> NetworkConnection {
         NetworkConnection {
-            shard_id: 0,
             client: None,
             node_id: target,
             addr: node.addr.to_owned(),
@@ -42,7 +40,6 @@ pub struct NetworkConnection {
     addr: String,
     client: Option<RaftRpcClient>,
     node_id: NodeId,
-    shard_id: ShardId,
 }
 
 impl NetworkConnection {

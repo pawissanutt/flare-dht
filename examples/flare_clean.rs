@@ -1,13 +1,9 @@
-use crate::flare::CleanRequest;
-use flare::flare_kv_client::FlareKvClient;
-
-pub mod flare {
-    tonic::include_proto!("flare"); // The string specified here must match the proto package name
-}
+use flare_dht::proto::CleanRequest;
+use flare_dht::proto::flare_kv_client::FlareKvClient;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut client = FlareKvClient::connect("http://[::1]:50051").await?;
+    let mut client = FlareKvClient::connect("http://127.0.0.1:8001").await?;
 
     let request = tonic::Request::new(CleanRequest::default());
 

@@ -19,11 +19,10 @@ pub struct FlareKvService {
 }
 
 impl FlareKvService {
-    pub(crate) fn new(node: &FlareNode) -> FlareKvService {
+    #[allow(dead_code)]
+    pub(crate) fn new(node: Arc<FlareNode>) -> FlareKvService {
         FlareKvService {
             shards: node.shards.clone(),
-            // map_descriptors: node.map_descriptors.clone(),
-            // collection_metas: node.meta_raft.
             metadata_manager: node.metadata_manager.clone(),
         }
     }

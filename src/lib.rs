@@ -6,7 +6,7 @@ mod metadata;
 pub mod proto;
 mod raft;
 pub mod rpc_server;
-mod shard;
+pub mod shard;
 #[cfg(test)]
 mod test;
 mod util;

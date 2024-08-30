@@ -1,6 +1,6 @@
-use crate::raft::state_machine::{AppStateMachine, GenericStateMachineData, RaftCommand};
+use crate::raft::state_machine::AppStateMachine;
 use rancor::Error;
-use std::{any::Any, collections::BTreeMap};
+use std::collections::BTreeMap;
 
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Debug, Default, Clone)]
 #[rkyv(compare(PartialEq), check_bytes, derive(Debug))]

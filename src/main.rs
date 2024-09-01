@@ -19,7 +19,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 mod cluster;
-mod shard_raft;
+// mod shard_raft;
 mod metadata;
 mod proto;
 mod raft;

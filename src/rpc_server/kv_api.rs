@@ -7,7 +7,7 @@ use crate::proto::{
     GetTopologyRequest, SetRequest, SingleKeyRequest, TopologyInfo, ValueResponse,
 };
 use crate::shard::hashmap::HashMapShard;
-use crate::shard::{raft::RaftShard, ShardId, KvShard};
+use crate::shard::{ShardId, KvShard};
 use dashmap::DashMap;
 use std::sync::Arc;
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;

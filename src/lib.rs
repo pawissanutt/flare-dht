@@ -1,7 +1,7 @@
 use clap::Parser;
 
 pub mod cluster;
-mod shard_raft;
+// mod shard_raft;
 mod metadata;
 pub mod proto;
 mod raft;

@@ -2,7 +2,6 @@ use std::error::Error;
 
 pub type ShardId = u64;
 
-pub mod raft;
 pub mod hashmap;
 
 pub trait KvShard : Sized {

@@ -1,5 +1,4 @@
 use crate::cluster::FlareNode;
-use crate::kv::state_machine::FlareKvRequest;
 use crate::metadata::state_machine::{FlareControlRequest, FlareControlResponse};
 use crate::metadata::FlareMetadataManager;
 use crate::proto::flare_kv_server::FlareKv;
@@ -7,14 +6,15 @@ use crate::proto::{
     CleanRequest, CleanResponse, CreateCollectionRequest, CreateCollectionResponse, EmptyResponse,
     GetTopologyRequest, SetRequest, SingleKeyRequest, TopologyInfo, ValueResponse,
 };
-use crate::shard::{FlareShard, ShardId};
+use crate::shard::hashmap::HashMapShard;
+use crate::shard::{raft::RaftShard, ShardId, KvShard};
 use dashmap::DashMap;
 use std::sync::Arc;
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
 
 pub struct FlareKvService {
-    shards: Arc<DashMap<ShardId, FlareShard>>,
+    shards: Arc<DashMap<ShardId, HashMapShard>>,
     metadata_manager: Arc<FlareMetadataManager>,
 }
 
@@ -48,11 +48,11 @@ impl FlareKv for FlareKvService {
         let shard = shards
             .get(&shard_ids[0])
             .ok_or(Status::internal("no shard"))?;
-        let state = shard.state_machine_store.state_machine.read().await;
-        if let Some(val) = state.app_data.0.get(&key_request.key) {
+        shard.get(&key_request.key).await;
+        if let Some(val) = shard.get(&key_request.key).await {
             Ok(Response::new(ValueResponse {
                 key: key_request.key,
-                value: val.clone(),
+                value: val,
             }))
         } else {
             Err(Status::not_found("not found store"))
@@ -63,7 +63,15 @@ impl FlareKv for FlareKvService {
         &self,
         request: Request<SingleKeyRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
-        todo!()
+        let set_request = request.into_inner();
+        let shard_ids = self.get_shard_ids(&set_request.key).await?;
+        let shards = self.shards.clone();
+        let shard = shards
+            .get(&shard_ids[0])
+            .ok_or(Status::internal("no shard"))?;
+        shard.delete(&set_request.key).await
+            .map_err(|_e| Status::internal("raft error"))?;
+        Ok(Response::new(EmptyResponse::default()))
     }
 
     async fn set(&self, request: Request<SetRequest>) -> Result<Response<EmptyResponse>, Status> {
@@ -73,14 +81,7 @@ impl FlareKv for FlareKvService {
         let shard = shards
             .get(&shard_ids[0])
             .ok_or(Status::internal("no shard"))?;
-        let raft_request = FlareKvRequest::Set {
-            key: set_request.key,
-            value: set_request.value,
-        };
-        shard
-            .raft
-            .client_write(raft_request)
-            .await
+        shard.set(set_request.key, set_request.value).await
             .map_err(|_e| Status::internal("raft error"))?;
         Ok(Response::new(EmptyResponse::default()))
     }
@@ -94,7 +95,7 @@ impl FlareKv for FlareKvService {
 
     async fn get_topology(
         &self,
-        request: Request<GetTopologyRequest>,
+        _request: Request<GetTopologyRequest>,
     ) -> Result<Response<TopologyInfo>, Status> {
         todo!()
     }
@@ -103,7 +104,7 @@ impl FlareKv for FlareKvService {
 
     async fn watch_topology(
         &self,
-        request: Request<GetTopologyRequest>,
+        _request: Request<GetTopologyRequest>,
     ) -> Result<Response<Self::WatchTopologyStream>, Status> {
         todo!()
     }
@@ -123,7 +124,7 @@ impl FlareKv for FlareKvService {
             .client_write(req)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
-        if let FlareControlResponse::CollectionCreated { meta: meta } = resp.response() {
+        if let FlareControlResponse::CollectionCreated { meta } = resp.response() {
             Ok(Response::new(CreateCollectionResponse {
                 name: meta.name.clone(),
             }))

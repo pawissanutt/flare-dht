@@ -1,5 +1,5 @@
-use crate::kv::{typ, KvTypeConfig};
-use crate::proto::flare_raft_client::FlareRaftClient;
+
+use crate::proto::flare_metadata_raft_client::FlareMetadataRaftClient;
 use crate::proto::ByteWrapper;
 use crate::raft::FlareRpcError;
 use crate::raft::NodeId;
@@ -17,7 +17,10 @@ use openraft::{BasicNode, RaftNetwork, RaftNetworkFactory};
 use tonic::transport::{Channel, Uri};
 use tracing::info;
 
-type RpcClient = FlareRaftClient<Channel>;
+use super::typ;
+use super::KvTypeConfig;
+
+type RpcClient = FlareMetadataRaftClient<Channel>;
 
 pub struct Network {
     pub(crate) shard_id: ShardId,
@@ -37,7 +40,7 @@ impl RaftNetworkFactory<KvTypeConfig> for Network {
         let addr = Uri::from_static(Box::leak(addr.into_boxed_str()));
         info!("create grpc client for {}", addr);
         let channel = Channel::builder(addr).connect_lazy();
-        let client = FlareRaftClient::new(channel);
+        let client = FlareMetadataRaftClient::new(channel);
         NetworkConnection {
             client,
             // target,
@@ -65,7 +68,7 @@ impl RaftNetwork<KvTypeConfig> for NetworkConnection {
         let data = client_encode(&req)?;
         let req = ByteWrapper {
             data,
-            shard_id: self.shard_id,
+            // shard_id: self.shard_id,
         };
         let response = self.client.append(req).await.map_err(|e| {
             let err = FlareRpcError::new(e);
@@ -84,7 +87,7 @@ impl RaftNetwork<KvTypeConfig> for NetworkConnection {
             .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
         let req = ByteWrapper {
             data,
-            shard_id: self.shard_id,
+            // shard_id: self.shard_id,
         };
         let response = self.client.snapshot(req).await.map_err(|e| {
             let err = FlareRpcError::new(e);
@@ -104,7 +107,7 @@ impl RaftNetwork<KvTypeConfig> for NetworkConnection {
         let data = client_encode(&req)?;
         let req = ByteWrapper {
             data,
-            shard_id: self.shard_id,
+            // shard_id: self.shard_id,
         };
         let response = self.client.vote(req).await.map_err(|e| {
             let err = FlareRpcError::new(e);

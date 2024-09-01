@@ -1,9 +1,7 @@
-use crate::kv::typ;
-use crate::proto::flare_raft_client::FlareRaftClient;
+use crate::proto::flare_metadata_raft_client::FlareMetadataRaftClient;
 use crate::proto::ByteWrapper;
 use crate::raft::FlareRpcError;
 use crate::raft::NodeId;
-use crate::shard::ShardId;
 use crate::util::{client_decode, client_encode};
 use bincode::config;
 use bincode::config::Configuration;
@@ -17,17 +15,17 @@ use openraft::{BasicNode, RaftNetwork, RaftNetworkFactory};
 use tonic::transport::{Channel, Uri};
 use tracing::info;
 
+use super::typ;
 use super::MetaTypeConfig;
 
-type RpcClient = FlareRaftClient<Channel>;
+type RpcClient = FlareMetadataRaftClient<Channel>;
 
 pub struct Network {
-    pub shard_id: ShardId,
 }
 
 impl Network {
     pub fn new() -> Self {
-        Network { shard_id: 0 }
+        Network { }
     }
 }
 
@@ -39,21 +37,15 @@ impl RaftNetworkFactory<MetaTypeConfig> for Network {
         let addr = Uri::from_static(Box::leak(addr.into_boxed_str()));
         info!("create grpc client for {}", addr);
         let channel = Channel::builder(addr).connect_lazy();
-        let client = FlareRaftClient::new(channel);
+        let client = FlareMetadataRaftClient::new(channel);
         NetworkConnection {
             client,
-            // target,
-            // target_node: node.clone(),
-            shard_id: self.shard_id,
         }
     }
 }
 
 pub struct NetworkConnection {
     client: RpcClient,
-    // target: NodeId,
-    // target_node: BasicNode,
-    shard_id: ShardId,
 }
 
 impl NetworkConnection {}
@@ -67,7 +59,6 @@ impl RaftNetwork<MetaTypeConfig> for NetworkConnection {
         let data = client_encode(&req)?;
         let req = ByteWrapper {
             data,
-            shard_id: self.shard_id,
         };
         let response = self.client.append(req).await.map_err(|e| {
             let err = FlareRpcError::new(e);
@@ -86,7 +77,6 @@ impl RaftNetwork<MetaTypeConfig> for NetworkConnection {
             .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
         let req = ByteWrapper {
             data,
-            shard_id: self.shard_id,
         };
         let response = self.client.snapshot(req).await.map_err(|e| {
             let err = FlareRpcError::new(e);
@@ -106,7 +96,6 @@ impl RaftNetwork<MetaTypeConfig> for NetworkConnection {
         let data = client_encode(&req)?;
         let req = ByteWrapper {
             data,
-            shard_id: self.shard_id,
         };
         let response = self.client.vote(req).await.map_err(|e| {
             let err = FlareRpcError::new(e);

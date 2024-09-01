@@ -3,7 +3,7 @@ package flare;
 
 import "flare-common.proto";
 
-service FlareRaft {
+service FlareMetadataRaft {
   rpc Vote(ByteWrapper) returns (ByteWrapper);
   rpc Snapshot(ByteWrapper) returns (ByteWrapper);
   rpc Append(ByteWrapper) returns (ByteWrapper);
@@ -19,7 +19,6 @@ service FlareControl {
 
 message ByteWrapper {
   bytes data = 1;
-  uint64 shard_id = 2;
 }
 
 message JoinRequest {

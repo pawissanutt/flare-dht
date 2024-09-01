@@ -15,7 +15,7 @@ pub type Raft = openraft::Raft<KvTypeConfig>;
 
 #[allow(dead_code)]
 pub mod typ {
-    use crate::kv::KvTypeConfig;
+    use crate::shard_raft::KvTypeConfig;
     use crate::raft::NodeId;
     use openraft::BasicNode;
 

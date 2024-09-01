@@ -1,8 +1,9 @@
 use crate::metadata::FlareMetadataManager;
 use crate::proto::flare_control_client::FlareControlClient;
 use crate::proto::{JoinRequest, LeaveRequest};
+use crate::shard::hashmap::HashMapShard;
 use crate::shard::ShardId;
-use crate::{raft::NodeId, shard::FlareShard, FlareOptions};
+use crate::{raft::NodeId, FlareOptions};
 use dashmap::DashMap;
 use openraft::ChangeMembers;
 use std::collections::BTreeMap;
@@ -14,9 +15,9 @@ use tonic::transport::{Channel, Uri};
 use tracing::info;
 
 #[derive(Clone)]
-pub struct FlareNode {
+pub  struct FlareNode {
     pub metadata_manager: Arc<FlareMetadataManager>,
-    pub shards: Arc<DashMap<ShardId, FlareShard>>,
+    pub shards: Arc<DashMap<ShardId, HashMapShard>>,
     pub addr: String,
     pub node_id: NodeId,
 }
@@ -107,5 +108,10 @@ impl FlareNode {
             }
         }
         info!("flare leave group");
+    }
+
+    pub fn create_shard(&self, shard_id: ShardId) {
+        
+        todo!() 
     }
 }

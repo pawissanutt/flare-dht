@@ -1,14 +1,12 @@
 use clap::Parser;
 
 pub mod cluster;
-mod kv;
+mod shard_raft;
 mod metadata;
 pub mod proto;
 mod raft;
 pub mod rpc_server;
 pub mod shard;
-#[cfg(test)]
-mod test;
 mod util;
 
 #[derive(Parser, Clone, Debug)]

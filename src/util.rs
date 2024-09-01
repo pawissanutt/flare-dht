@@ -19,7 +19,6 @@ pub fn server_encode<T: Serialize>(data: &T) -> Result<ByteWrapper, Status> {
         // let result = serde_json::to_vec(data)
         .map_err(|e| Status::internal(e.to_string()))
         .map(|v| ByteWrapper {
-            shard_id: 0,
             data: v,
         });
     result

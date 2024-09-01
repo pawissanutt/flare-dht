@@ -1,6 +1,5 @@
 use std::error::Error;
 
-use crate::kv::typ;
 use crate::raft::NodeId;
 use crate::rpc_server::raft2::FlareTarpcError::{RaftError, ShardNotFound};
 use crate::rpc_server::raft2::{FlareTarpcError, RaftRpcClient};
@@ -17,7 +16,7 @@ use tarpc::client::Config;
 use tarpc::context;
 use tarpc::tokio_serde::formats::Bincode;
 
-use super::MetaTypeConfig;
+use super::{typ, MetaTypeConfig};
 
 #[derive(Default)]
 pub struct TarpcNetwork {}

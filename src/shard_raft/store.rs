@@ -1,4 +1,4 @@
-use crate::kv::KvTypeConfig;
+use crate::shard_raft::KvTypeConfig;
 use crate::raft::state_machine::{AppStateMachine, GenericStateMachineData};
 use crate::raft::NodeId;
 use openraft::storage::RaftStateMachine;

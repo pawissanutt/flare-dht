@@ -2,6 +2,8 @@ mod network;
 mod network_tarpc;
 pub mod state_machine;
 mod store;
+#[cfg(test)]
+mod test;
 
 use openraft::Config;
 use state_machine::FlareMetadataSM;
@@ -25,11 +27,22 @@ openraft::declare_raft_types!(
 
 pub type FlareMetaRaft = openraft::Raft<MetaTypeConfig>;
 
+mod typ {
+    
+    use crate::raft::NodeId;
+    pub type RaftError<E = openraft::error::Infallible> = openraft::error::RaftError<NodeId, E>;
+    pub type RPCError<E = openraft::error::Infallible> =
+        openraft::error::RPCError<NodeId, openraft::BasicNode, RaftError<E>>;
+}
+
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct FlareMetadataManager {
     pub raft: FlareMetaRaft,
     pub state_machine: Arc<StateMachineStore<FlareMetadataSM>>,
     pub node_id: NodeId,
+    pub config: Arc<Config>,
+    log_store: MemLogStore<MetaTypeConfig>,
 }
 
 impl FlareMetadataManager {
@@ -62,6 +75,8 @@ impl FlareMetadataManager {
             raft,
             state_machine: sm_arc,
             node_id,
+            config,
+            log_store
         }
     }
 

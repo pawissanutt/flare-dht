@@ -4,19 +4,20 @@ use openraft::testing::StoreBuilder;
 use openraft::testing::Suite;
 use openraft::StorageError;
 
-use crate::kv::state_machine::KVAppStateMachine;
-use crate::kv::store::StateMachineStore;
-use crate::kv::KvTypeConfig;
 use crate::raft::log::MemLogStore;
 use crate::raft::NodeId;
+
+use super::state_machine::FlareMetadataSM;
+use super::store::StateMachineStore;
+use super::MetaTypeConfig;
 
 struct MemKVStoreBuilder {}
 
 impl
     StoreBuilder<
-        KvTypeConfig,
-        MemLogStore<KvTypeConfig>,
-        Arc<StateMachineStore<KVAppStateMachine>>,
+        MetaTypeConfig,
+        MemLogStore<MetaTypeConfig>,
+        Arc<StateMachineStore<FlareMetadataSM>>,
         (),
     > for MemKVStoreBuilder
 {
@@ -25,8 +26,8 @@ impl
     ) -> Result<
         (
             (),
-            MemLogStore<KvTypeConfig>,
-            Arc<StateMachineStore<KVAppStateMachine>>,
+            MemLogStore<MetaTypeConfig>,
+            Arc<StateMachineStore<FlareMetadataSM>>,
         ),
         StorageError<NodeId>,
     > {

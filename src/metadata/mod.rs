@@ -1,5 +1,4 @@
 mod network;
-mod network_tarpc;
 pub mod state_machine;
 mod store;
 #[cfg(test)]

@@ -53,6 +53,7 @@ message CleanResponse {
 message CreateCollectionRequest{
   string name = 1;
   int32 shard_count = 2;
+  repeated uint64 shard_assignments = 3;
 }
 
 message CreateCollectionResponse {

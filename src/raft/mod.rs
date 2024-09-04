@@ -8,28 +8,24 @@ pub mod state_machine;
 
 pub type NodeId = u64;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct FlareRpcError {
-    code: u32,
-    message: String,
+#[derive(thiserror::Error, Debug, serde::Serialize, serde::Deserialize)]
+pub enum FlareRpcError {
+    #[error("Unreachable")]
+    Unreachable,
+    #[error("Internal `{0}`")]
+    Internal(String),
+    #[error("Other {0}:{1}")]
+    Other(u32, String),
 }
 
-impl FlareRpcError {
-    pub fn new(status: Status) -> Self {
-        FlareRpcError {
-            code: status.code() as u32,
-            message: status.message().into(),
+impl From<Status> for FlareRpcError {
+    fn from(value: Status) -> Self {
+        match value.code() {
+            
+            _ => FlareRpcError::Other(value.code() as u32, value.message().into()),
         }
     }
 }
-
-impl std::fmt::Display for FlareRpcError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "error with code {}: {}", self.code, self.message)
-    }
-}
-
-impl std::error::Error for FlareRpcError {}
 
 pub type RaftError<E = openraft::error::Infallible> = openraft::error::RaftError<NodeId, E>;
 pub type RPCError<E = openraft::error::Infallible> =

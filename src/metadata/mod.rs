@@ -5,7 +5,7 @@ mod store;
 mod test;
 
 use openraft::Config;
-use state_machine::FlareMetadataSM;
+use state_machine::{CollectionMetadata, FlareMetadataSM};
 use std::str::FromStr;
 use std::{io::Cursor, sync::Arc};
 use store::StateMachineStore;
@@ -27,7 +27,7 @@ openraft::declare_raft_types!(
 pub type FlareMetaRaft = openraft::Raft<MetaTypeConfig>;
 
 mod typ {
-    
+
     use crate::raft::NodeId;
     pub type RaftError<E = openraft::error::Infallible> = openraft::error::RaftError<NodeId, E>;
     pub type RPCError<E = openraft::error::Infallible> =
@@ -42,6 +42,12 @@ pub struct FlareMetadataManager {
     pub node_id: NodeId,
     pub config: Arc<Config>,
     log_store: MemLogStore<MetaTypeConfig>,
+}
+
+fn resolve_shard_id(meta: &CollectionMetadata, key: &str) -> Option<u64> {
+    let hashed = mur3::murmurhash3_x86_32(key.as_bytes(), meta.seed) as u32;
+    let shard_index = hashed / (u32::MAX / meta.shard_ids.len() as u32);
+    Some(meta.shard_ids[shard_index as usize])
 }
 
 impl FlareMetadataManager {
@@ -75,7 +81,7 @@ impl FlareMetadataManager {
             state_machine: sm_arc,
             node_id,
             config,
-            log_store
+            log_store,
         }
     }
 
@@ -88,6 +94,16 @@ impl FlareMetadataManager {
             .get(col_name)
             .map(|col| col.shard_ids.clone());
         col
+    }
+
+    pub async fn get_shard_id(&self, col_name: &str, key: &str) -> Option<u64> {
+        let col_meta_state = self.state_machine.state_machine.read().await;
+        let col = col_meta_state.app_data.collections.get(col_name);
+        if let Some(meta) = col {
+            resolve_shard_id(meta, key)
+        } else {
+            None
+        }
     }
 
     #[inline]
@@ -119,4 +135,19 @@ impl FlareMetadataManager {
             FlareControlClient::new(channel)
         })
     }
+}
+
+#[test]
+pub fn test_resolve_shard() -> Result<(), Box<dyn std::error::Error>> {
+    let meta = CollectionMetadata {
+        name: "".into(),
+        shard_ids: (0..16).collect(),
+        replication: 1,
+        seed: 0,
+    };
+    for i in 0..10000 {
+        let option = resolve_shard_id(&meta, &format!("test-{}", i));
+        assert_ne!(option, None);
+    }
+    Ok(())
 }

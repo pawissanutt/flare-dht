@@ -1,6 +1,6 @@
-use crate::raft::state_machine::AppStateMachine;
+use crate::{proto::CreateCollectionRequest, raft::state_machine::AppStateMachine};
 use rancor::Error;
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, default};
 
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Debug, Default, Clone)]
 #[rkyv(compare(PartialEq), check_bytes, derive(Debug))]
@@ -23,7 +23,10 @@ impl AppStateMachine for FlareMetadataSM {
 }
 
 impl FlareMetadataSM {
-    fn create_collection(&mut self, name: &str, shard_count: u32) -> FlareControlResponse {
+    fn create_collection(&mut self, req: &CreateCollectionRequest) -> FlareControlResponse {
+        let name = &req.name;
+        let shard_count = req.shard_count;
+        // let shard_assignment =
         if self.collections.contains_key(name) {
             return FlareControlResponse::Rejected("collection already exist".to_string());
         }
@@ -44,6 +47,7 @@ impl FlareMetadataSM {
             name: name.into(),
             shard_ids: shard_ids,
             replication: 1,
+            ..Default::default()
         };
         self.collections.insert(name.into(), col_meta.clone());
         FlareControlResponse::CollectionCreated { meta: col_meta }
@@ -61,7 +65,7 @@ pub struct ShardMetadata {
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub enum FlareControlRequest {
-    CreateCollection { name: String, shard_count: u32 },
+    CreateCollection(CreateCollectionRequest),
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
@@ -85,6 +89,7 @@ pub enum FlareControlResponse {
 pub struct CollectionMetadata {
     pub name: String,
     pub shard_ids: Vec<u64>,
+    pub seed: u32,
     pub replication: u8,
 }
 
@@ -101,11 +106,10 @@ impl<A: crate::raft::state_machine::AppStateMachine> crate::raft::state_machine:
         let value_any = app_data as &mut dyn std::any::Any;
         match value_any.downcast_mut::<FlareMetadataSM>() {
             Some(app_state) => match self {
-                FlareControlRequest::CreateCollection { name, shard_count } => {
-                    app_state.create_collection(name, *shard_count)
-                }
+                FlareControlRequest::CreateCollection(req) => app_state.create_collection(req),
             },
             None => panic!("App state is not KVAppStateMachine"),
         }
+        // todo!()
     }
 }

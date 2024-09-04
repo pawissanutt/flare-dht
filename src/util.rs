@@ -18,9 +18,7 @@ pub fn server_encode<T: Serialize>(data: &T) -> Result<ByteWrapper, Status> {
     let result = bincode::serde::encode_to_vec(&data, CONFIGURATION)
         // let result = serde_json::to_vec(data)
         .map_err(|e| Status::internal(e.to_string()))
-        .map(|v| ByteWrapper {
-            data: v,
-        });
+        .map(|v| ByteWrapper { data: v });
     result
 }
 

@@ -1,3 +1,4 @@
+use crate::metadata::state_machine::ShardMetadata;
 use crate::metadata::FlareMetadataManager;
 use crate::proto::flare_control_client::FlareControlClient;
 use crate::proto::{JoinRequest, LeaveRequest};
@@ -6,6 +7,7 @@ use crate::shard::ShardId;
 use crate::{raft::NodeId, FlareOptions};
 use dashmap::DashMap;
 use openraft::ChangeMembers;
+use tonic::Status;
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::str::FromStr;
@@ -15,11 +17,27 @@ use tonic::transport::{Channel, Uri};
 use tracing::info;
 
 #[derive(Clone)]
-pub  struct FlareNode {
+pub struct FlareNode {
     pub metadata_manager: Arc<FlareMetadataManager>,
-    pub shards: Arc<DashMap<ShardId, HashMapShard>>,
+    pub shards: Arc<DashMap<ShardId, Arc<HashMapShard>>>,
     pub addr: String,
     pub node_id: NodeId,
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum FlareError {
+    #[error("No shard `{0}` on current node")]
+    NoShardFound(ShardId),
+    #[error("No collection `{0}` in cluster")]
+    NoCollection(String),
+    // #[error("unknown error")]
+    // Unknown,
+}
+
+impl From<FlareError> for tonic::Status {
+    fn from(value: FlareError) -> Self {
+        Status::not_found(value.to_string())
+    }
 }
 
 impl FlareNode {
@@ -66,29 +84,41 @@ impl FlareNode {
         Ok(())
     }
 
+    async fn shutdown(&self) {
+        self.metadata_manager.raft.shutdown().await.unwrap();
+    }
+
     pub async fn leave(&self) {
         let mm = self.metadata_manager.clone();
         let mut nodes = std::collections::BTreeSet::new();
         nodes.insert(self.node_id);
         if mm.is_leader().await {
-            let change_members: ChangeMembers<u64, openraft::BasicNode> =
-                ChangeMembers::RemoveVoters(nodes);
-            mm.raft
-                .change_membership(change_members, true)
-                .await
-                .unwrap();
-            tokio::time::sleep(Duration::from_secs(2)).await;
-            match mm.create_control_client().await {
-                Some(mut client) => {
-                    client
-                        .leave(LeaveRequest {
-                            node_id: self.node_id,
-                        })
-                        .await
-                        .unwrap();
-                }
-                None => {}
-            };
+            let sm = mm.state_machine.state_machine.read().await;
+            let node_count = sm.last_membership.nodes().count();
+            drop(sm);
+            if node_count == 1 {
+                self.shutdown().await;
+                return;
+            } else {
+                let change_members: ChangeMembers<u64, openraft::BasicNode> =
+                    ChangeMembers::RemoveVoters(nodes);
+                mm.raft
+                    .change_membership(change_members, true)
+                    .await
+                    .unwrap();
+                tokio::time::sleep(Duration::from_secs(2)).await;
+                match mm.create_control_client().await {
+                    Some(mut client) => {
+                        client
+                            .leave(LeaveRequest {
+                                node_id: self.node_id,
+                            })
+                            .await
+                            .unwrap();
+                    }
+                    None => {}
+                };
+            }
         } else {
             let is_voter = mm.is_current_voter().await;
             let mut client = mm.create_control_client().await.unwrap();
@@ -110,8 +140,49 @@ impl FlareNode {
         info!("flare leave group");
     }
 
-    pub fn create_shard(&self, shard_id: ShardId) {
-        
-        todo!() 
+    fn create_shard(&self, shard_metadata: ShardMetadata) -> Arc<HashMapShard> {
+        info!("create shard {:?}", &shard_metadata);
+        let shard = HashMapShard {
+            shard_metadata: shard_metadata,
+            ..Default::default()
+        };
+        let shard = Arc::new(shard);
+        self.shards.insert(shard.shard_id(), shard.clone());
+        shard
+    }
+
+    pub async fn sync_shard(&self) {
+        let sm = self
+            .metadata_manager
+            .state_machine
+            .state_machine
+            .read()
+            .await;
+        let local_shards = sm
+            .app_data
+            .shards
+            .values()
+            .filter(|shard| shard.primary.unwrap_or(0) == self.node_id)
+            .filter(|shard| !self.shards.contains_key(&shard.id));
+        for s in local_shards {
+            self.create_shard(s.clone());
+        }
+    }
+
+    pub async fn get_shard(
+        &self,
+        collection: &str,
+        key: &str,
+    ) -> Result<Arc<HashMapShard>, FlareError> {
+        let option = self.metadata_manager.get_shard_id(collection, key).await;
+        if let Some(shard_id) = option {
+            if let Some(shard) = self.shards.get(&shard_id) {
+                Ok(shard.clone())
+            } else {
+                Err(FlareError::NoShardFound(shard_id))
+            }
+        } else {
+            Err(FlareError::NoCollection(collection.into()))
+        }
     }
 }

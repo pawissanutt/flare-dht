@@ -2,12 +2,15 @@
 name = "flare-pb"
 version = "0.1.1"
 edition = "2021"
+description = "The protobuf data types for flare-dht"
+repository = "https://github.com/pawissanutt/flare-dht"
+license = "Apache-2.0"
 
 [dependencies]
 prost = "0.13"
 prost-types = "0.13"
 tonic = "0.12"
-serde = { version = "1.0.205", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
 
 [build-dependencies]
 tonic-build = { version = "0.12", features = ["prost"] }

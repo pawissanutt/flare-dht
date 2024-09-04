@@ -1,41 +1,22 @@
 use crate::cluster::FlareNode;
-use crate::metadata::state_machine::{FlareControlRequest, FlareControlResponse};
-use crate::metadata::FlareMetadataManager;
 use crate::shard::KvShard;
 use flare_pb::flare_kv_server::FlareKv;
 use flare_pb::{
     CleanRequest, CleanResponse, CreateCollectionRequest, CreateCollectionResponse, EmptyResponse,
     GetTopologyRequest, SetRequest, SingleKeyRequest, TopologyInfo, ValueResponse,
 };
-use futures::TryFutureExt;
 use std::sync::Arc;
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
 
 pub struct FlareKvService {
     flare_node: Arc<FlareNode>,
-    metadata_manager: Arc<FlareMetadataManager>,
 }
 
 impl FlareKvService {
     #[allow(dead_code)]
     pub(crate) fn new(flare_node: Arc<FlareNode>) -> FlareKvService {
-        let f = flare_node.clone();
-        FlareKvService {
-            flare_node,
-            metadata_manager: f.metadata_manager.clone(),
-        }
-    }
-
-    #[inline]
-    async fn get_shard_ids(&self, col_name: &str) -> Result<Vec<u64>, Status> {
-        self.metadata_manager
-            .get_shard_ids(col_name)
-            .await
-            .ok_or(Status::not_found(format!(
-                "not found collection {}",
-                col_name
-            )))
+        FlareKvService { flare_node }
     }
 }
 
@@ -110,28 +91,10 @@ impl FlareKv for FlareKvService {
         &self,
         request: Request<CreateCollectionRequest>,
     ) -> Result<Response<CreateCollectionResponse>, Status> {
-        let mut ccreq = request.into_inner();
-        if ccreq.shard_count == 0 {
-            return Err(Status::invalid_argument("shard count must be positive"));
-        }
-        if ccreq.shard_assignments.len() != ccreq.shard_count as usize {
-            let node_id = self.flare_node.node_id;
-            ccreq.shard_assignments = vec![node_id].repeat(ccreq.shard_count as usize);
-        }
-        let req = FlareControlRequest::CreateCollection(ccreq);
-        let resp = self
-            .metadata_manager
-            .raft
-            .client_write(req)
+        self.flare_node
+            .create_collection(request.into_inner())
             .await
-            .map_err(|e| Status::from_error(Box::new(e)))?;
-        if let FlareControlResponse::CollectionCreated { meta } = resp.response() {
-            self.flare_node.sync_shard().await;
-            Ok(Response::new(CreateCollectionResponse {
-                name: meta.name.clone(),
-            }))
-        } else {
-            Err(Status::already_exists("collection already exist"))
-        }
+            .map(|r| Response::new(r))
+            .map_err(|e| Status::from(e))
     }
 }

@@ -1,11 +1,11 @@
-use crate::metadata::state_machine::ShardMetadata;
+use crate::metadata::state_machine::{FlareControlRequest, FlareControlResponse, ShardMetadata};
 use crate::metadata::FlareMetadataManager;
 use crate::shard::hashmap::HashMapShard;
 use crate::shard::ShardId;
 use crate::{raft::NodeId, FlareOptions};
 use dashmap::DashMap;
 use flare_pb::flare_control_client::FlareControlClient;
-use flare_pb::{JoinRequest, LeaveRequest};
+use flare_pb::{CreateCollectionRequest, CreateCollectionResponse, JoinRequest, LeaveRequest};
 use openraft::ChangeMembers;
 use std::collections::BTreeMap;
 use std::error::Error;
@@ -30,13 +30,19 @@ pub enum FlareError {
     NoShardFound(ShardId),
     #[error("No collection `{0}` in cluster")]
     NoCollection(String),
-    // #[error("unknown error")]
-    // Unknown,
+    #[error("Invalid: {0}")]
+    InvalidArgument(String),
+    #[error("Invalid: {0}")]
+    UnknownError(#[from] Box<dyn Error + Send + Sync + 'static>),
 }
 
 impl From<FlareError> for tonic::Status {
     fn from(value: FlareError) -> Self {
-        Status::not_found(value.to_string())
+        match value {
+            FlareError::InvalidArgument(msg) => Status::invalid_argument(msg),
+            FlareError::UnknownError(e) => Status::from_error(e),
+            _ => Status::not_found(value.to_string()),
+        }
     }
 }
 
@@ -184,6 +190,38 @@ impl FlareNode {
             }
         } else {
             Err(FlareError::NoCollection(collection.into()))
+        }
+    }
+
+    pub async fn create_collection(
+        &self,
+        mut request: CreateCollectionRequest,
+    ) -> Result<CreateCollectionResponse, FlareError> {
+        if request.shard_count == 0 {
+            return Err(FlareError::InvalidArgument(
+                "shard count must be positive".into(),
+            ));
+        }
+        if request.shard_assignments.len() != request.shard_count as usize {
+            let node_id = self.node_id;
+            request.shard_assignments = vec![node_id].repeat(request.shard_count as usize);
+        }
+        let req = FlareControlRequest::CreateCollection(request);
+        let resp = self
+            .metadata_manager
+            .raft
+            .client_write(req)
+            .await
+            .map_err(|e| FlareError::UnknownError(Box::new(e)))?;
+        if let FlareControlResponse::CollectionCreated { meta } = resp.response() {
+            self.sync_shard().await;
+            Ok(CreateCollectionResponse {
+                name: meta.name.clone(),
+            })
+        } else {
+            Err(FlareError::InvalidArgument(
+                "collection already exist".into(),
+            ))
         }
     }
 }

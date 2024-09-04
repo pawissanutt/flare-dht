@@ -1,5 +1,3 @@
-use std::fmt;
-
 use openraft::BasicNode;
 use tonic::Status;
 

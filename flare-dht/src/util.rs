@@ -1,5 +1,6 @@
-use crate::{proto::ByteWrapper, raft::RPCError};
+use crate::raft::RPCError;
 use bincode::config::{self, Configuration};
+use flare_pb::ByteWrapper;
 use openraft::error::NetworkError;
 use serde::{de::DeserializeOwned, Serialize};
 use tonic::Status;

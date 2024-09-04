@@ -540,6 +540,7 @@ dependencies = [
  "bincode",
  "clap",
  "dashmap",
+ "flare-pb",
  "futures",
  "mur3",
  "openraft",
@@ -558,6 +559,17 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tsid",
+]
+
+[[package]]
+name = "flare-pb"
+version = "0.1.1"
+dependencies = [
+ "prost",
+ "prost-types",
+ "serde",
+ "tonic",
+ "tonic-build",
 ]
 
 [[package]]

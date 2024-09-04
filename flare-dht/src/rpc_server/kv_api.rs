@@ -1,14 +1,14 @@
 use crate::cluster::FlareNode;
 use crate::metadata::state_machine::{FlareControlRequest, FlareControlResponse};
 use crate::metadata::FlareMetadataManager;
-use crate::proto::flare_kv_server::FlareKv;
-use crate::proto::{
+use crate::shard::KvShard;
+use flare_pb::flare_kv_server::FlareKv;
+use flare_pb::{
     CleanRequest, CleanResponse, CreateCollectionRequest, CreateCollectionResponse, EmptyResponse,
     GetTopologyRequest, SetRequest, SingleKeyRequest, TopologyInfo, ValueResponse,
 };
-use crate::shard::KvShard;
-use std::sync::Arc;
 use futures::TryFutureExt;
+use std::sync::Arc;
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
 
@@ -39,8 +39,6 @@ impl FlareKvService {
     }
 }
 
-
-
 #[tonic::async_trait]
 impl FlareKv for FlareKvService {
     async fn get(
@@ -48,7 +46,10 @@ impl FlareKv for FlareKvService {
         request: Request<SingleKeyRequest>,
     ) -> Result<Response<ValueResponse>, Status> {
         let key_request = request.into_inner();
-        let shard = self.flare_node.get_shard(&key_request.collection, &key_request.key).await?;
+        let shard = self
+            .flare_node
+            .get_shard(&key_request.collection, &key_request.key)
+            .await?;
         if let Some(val) = shard.get(&key_request.key).await {
             Ok(Response::new(ValueResponse {
                 key: key_request.key,
@@ -64,21 +65,21 @@ impl FlareKv for FlareKvService {
         request: Request<SingleKeyRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
         let key_request = request.into_inner();
-        let shard = self.flare_node.get_shard(&key_request.collection, &key_request.key)
+        let shard = self
+            .flare_node
+            .get_shard(&key_request.collection, &key_request.key)
             .await?;
-        shard
-            .delete(&key_request.key)
-            .await?;
+        shard.delete(&key_request.key).await?;
         Ok(Response::new(EmptyResponse::default()))
     }
 
     async fn set(&self, request: Request<SetRequest>) -> Result<Response<EmptyResponse>, Status> {
         let set_request = request.into_inner();
-        let shard = self.flare_node.get_shard(&set_request.collection, &set_request.key)
+        let shard = self
+            .flare_node
+            .get_shard(&set_request.collection, &set_request.key)
             .await?;
-        shard
-            .set(set_request.key, set_request.value)
-            .await?;
+        shard.set(set_request.key, set_request.value).await?;
         Ok(Response::new(EmptyResponse::default()))
     }
 
@@ -110,6 +111,9 @@ impl FlareKv for FlareKvService {
         request: Request<CreateCollectionRequest>,
     ) -> Result<Response<CreateCollectionResponse>, Status> {
         let mut ccreq = request.into_inner();
+        if ccreq.shard_count == 0 {
+            return Err(Status::invalid_argument("shard count must be positive"));
+        }
         if ccreq.shard_assignments.len() != ccreq.shard_count as usize {
             let node_id = self.flare_node.node_id;
             ccreq.shard_assignments = vec![node_id].repeat(ccreq.shard_count as usize);

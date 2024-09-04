@@ -6,7 +6,7 @@ use std::{
 
 use clap::Parser;
 use cluster::FlareNode;
-use proto::{
+use flare_pb::{
     flare_control_server::FlareControlServer, flare_kv_server::FlareKvServer,
     flare_metadata_raft_server::FlareMetadataRaftServer,
 };
@@ -76,8 +76,8 @@ pub async fn start_server(options: FlareOptions) -> Result<Arc<FlareNode>, Box<d
     let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), options.port);
     info!("start on {}", socket);
     let reflection_server = tonic_reflection::server::Builder::configure()
-        .register_encoded_file_descriptor_set(proto::FILE_DESCRIPTOR_SET)
-        .build()
+        .register_encoded_file_descriptor_set(flare_pb::FILE_DESCRIPTOR_SET)
+        .build_v1alpha()
         .unwrap();
 
     drop(flare_node);

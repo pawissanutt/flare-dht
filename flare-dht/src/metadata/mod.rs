@@ -12,10 +12,10 @@ use store::StateMachineStore;
 use tonic::transport::{Channel, Uri};
 use tracing::info;
 
-use crate::{
-    proto::flare_control_client::FlareControlClient,
-    raft::{log::MemLogStore, NodeId},
-};
+use flare_pb::flare_control_client::FlareControlClient;
+
+use crate::raft::log::MemLogStore;
+use crate::raft::NodeId;
 
 openraft::declare_raft_types!(
     /// Declare the type configuration for example K/V store.
@@ -46,7 +46,8 @@ pub struct FlareMetadataManager {
 
 fn resolve_shard_id(meta: &CollectionMetadata, key: &str) -> Option<u64> {
     let hashed = mur3::murmurhash3_x86_32(key.as_bytes(), meta.seed) as u32;
-    let shard_index = hashed / (u32::MAX / meta.shard_ids.len() as u32);
+    let shard_count = meta.shard_ids.len();
+    let shard_index = hashed / (u32::MAX / shard_count as u32);
     Some(meta.shard_ids[shard_index as usize])
 }
 
@@ -138,16 +139,17 @@ impl FlareMetadataManager {
 }
 
 #[test]
-pub fn test_resolve_shard() -> Result<(), Box<dyn std::error::Error>> {
+pub fn test_resolve_shard2() -> Result<(), Box<dyn std::error::Error>> {
     let meta = CollectionMetadata {
-        name: "".into(),
-        shard_ids: (0..16).collect(),
+        name: "test".into(),
+        shard_ids: (0..1).collect(),
         replication: 1,
-        seed: 0,
+        seed: rand::random(),
     };
     for i in 0..10000 {
         let option = resolve_shard_id(&meta, &format!("test-{}", i));
         assert_ne!(option, None);
+        assert!(option.unwrap() < 1)
     }
     Ok(())
 }

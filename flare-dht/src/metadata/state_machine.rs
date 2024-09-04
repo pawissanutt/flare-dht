@@ -1,6 +1,7 @@
-use crate::{proto::CreateCollectionRequest, raft::state_machine::AppStateMachine};
+use crate::raft::state_machine::AppStateMachine;
+use flare_pb::CreateCollectionRequest;
 use rancor::Error;
-use std::{collections::BTreeMap, default};
+use std::collections::BTreeMap;
 
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Debug, Default, Clone)]
 #[rkyv(compare(PartialEq), check_bytes, derive(Debug))]
@@ -32,14 +33,16 @@ impl FlareMetadataSM {
         }
         // let shards = Vec::with_capacity(shard_count as usize);
         let mut shard_ids = Vec::with_capacity(shard_count as usize);
-        for i in (self.last_shard_id + 1)..=(shard_count as u64) {
+        for i in 0..shard_count {
+            let id = i as u64 + self.last_shard_id + 1;
             let shard_meta = ShardMetadata {
-                id: i,
+                id: id,
                 collection: name.into(),
+                primary: Some(req.shard_assignments[i as usize]),
                 ..Default::default()
             };
-            shard_ids.push(i);
-            self.shards.insert(i, shard_meta);
+            shard_ids.push(id);
+            self.shards.insert(id, shard_meta);
         }
         self.last_shard_id += shard_count as u64;
 

@@ -1,5 +1,5 @@
-use flare_dht::proto::flare_kv_client::FlareKvClient;
-use flare_dht::proto::CleanRequest;
+use flare_pb::flare_kv_client::FlareKvClient;
+use flare_pb::CleanRequest;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

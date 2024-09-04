@@ -1,6 +1,6 @@
 use crate::cluster::FlareNode;
-use crate::proto::flare_control_server::FlareControl;
-use crate::proto::{
+use flare_pb::flare_control_server::FlareControl;
+use flare_pb::{
     ClusterMetadata, ClusterMetadataRequest, ClusterTopologyInfo, ClusterTopologyRequest,
     CollectionMetadata, JoinRequest, JoinResponse, LeaveRequest, LeaveResponse, ShardMetadata,
 };

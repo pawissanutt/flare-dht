@@ -1,10 +1,10 @@
-use crate::proto::flare_metadata_raft_client::FlareMetadataRaftClient;
-use crate::proto::ByteWrapper;
 use crate::raft::FlareRpcError;
 use crate::raft::NodeId;
 use crate::util::{client_decode, client_encode};
 use bincode::config;
 use bincode::config::Configuration;
+use flare_pb::flare_metadata_raft_client::FlareMetadataRaftClient;
+use flare_pb::ByteWrapper;
 
 use openraft::error::{InstallSnapshotError, NetworkError, RPCError};
 use openraft::network::RPCOption;
@@ -52,7 +52,7 @@ impl NetworkConnection {}
 
 // fn map_status<E: rancor::StdError>(status: Status) -> typ::RPCError<E> {
 //     let err = FlareRpcError::new(status);
-//     if 
+//     if
 //     RPCError::Network(NetworkError::new(&err))
 // }
 

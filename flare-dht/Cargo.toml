@@ -33,6 +33,7 @@ rancor = "0.1.0-alpha.10"
 rand = "0.8"
 # tarpc = { version = "0.34", features = ["tokio1", "serde-transport", "tcp", "serde-transport-bincode"] }
 futures = "0.3"
+flare-pb = {path = "../flare-pb"}
 
 [dev-dependencies]
 tsid = "0.3"

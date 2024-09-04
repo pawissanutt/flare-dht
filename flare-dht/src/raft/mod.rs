@@ -21,7 +21,6 @@ pub enum FlareRpcError {
 impl From<Status> for FlareRpcError {
     fn from(value: Status) -> Self {
         match value.code() {
-            
             _ => FlareRpcError::Other(value.code() as u32, value.message().into()),
         }
     }

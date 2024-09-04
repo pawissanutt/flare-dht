@@ -1,7 +1,7 @@
 use crate::cluster::FlareNode;
-use crate::proto::flare_metadata_raft_server::FlareMetadataRaft;
-use crate::proto::ByteWrapper;
 use crate::util::{server_decode, server_encode};
+use flare_pb::flare_metadata_raft_server::FlareMetadataRaft;
+use flare_pb::ByteWrapper;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 

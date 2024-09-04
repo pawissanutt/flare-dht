@@ -1,5 +1,5 @@
-use flare_dht::proto::flare_kv_client::FlareKvClient;
-use flare_dht::proto::SetRequest;
+use flare_pb::flare_kv_client::FlareKvClient;
+use flare_pb::SetRequest;
 use std::time::SystemTime;
 
 #[tokio::main]

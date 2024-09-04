@@ -1,19 +1,19 @@
 use crate::metadata::state_machine::ShardMetadata;
 use crate::metadata::FlareMetadataManager;
-use crate::proto::flare_control_client::FlareControlClient;
-use crate::proto::{JoinRequest, LeaveRequest};
 use crate::shard::hashmap::HashMapShard;
 use crate::shard::ShardId;
 use crate::{raft::NodeId, FlareOptions};
 use dashmap::DashMap;
+use flare_pb::flare_control_client::FlareControlClient;
+use flare_pb::{JoinRequest, LeaveRequest};
 use openraft::ChangeMembers;
-use tonic::Status;
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tonic::transport::{Channel, Uri};
+use tonic::Status;
 use tracing::info;
 
 #[derive(Clone)]
@@ -152,6 +152,7 @@ impl FlareNode {
     }
 
     pub async fn sync_shard(&self) {
+        info!("sync shard");
         let sm = self
             .metadata_manager
             .state_machine

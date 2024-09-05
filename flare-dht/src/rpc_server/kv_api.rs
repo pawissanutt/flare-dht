@@ -1,9 +1,9 @@
 use crate::cluster::FlareNode;
-use crate::shard::KvShard;
 use flare_pb::flare_kv_server::FlareKv;
 use flare_pb::{
-    CleanRequest, CleanResponse, CreateCollectionRequest, CreateCollectionResponse, EmptyResponse,
-    GetTopologyRequest, SetRequest, SingleKeyRequest, TopologyInfo, ValueResponse,
+    CleanRequest, CleanResponse, CreateCollectionRequest,
+    CreateCollectionResponse, EmptyResponse, GetTopologyRequest, SetRequest,
+    SingleKeyRequest, TopologyInfo, ValueResponse,
 };
 use std::sync::Arc;
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
@@ -54,7 +54,10 @@ impl FlareKv for FlareKvService {
         Ok(Response::new(EmptyResponse::default()))
     }
 
-    async fn set(&self, request: Request<SetRequest>) -> Result<Response<EmptyResponse>, Status> {
+    async fn set(
+        &self,
+        request: Request<SetRequest>,
+    ) -> Result<Response<EmptyResponse>, Status> {
         let set_request = request.into_inner();
         let shard = self
             .flare_node

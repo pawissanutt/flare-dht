@@ -1,8 +1,9 @@
 use crate::cluster::FlareNode;
 use flare_pb::flare_control_server::FlareControl;
 use flare_pb::{
-    ClusterMetadata, ClusterMetadataRequest, ClusterTopologyInfo, ClusterTopologyRequest,
-    CollectionMetadata, JoinRequest, JoinResponse, LeaveRequest, LeaveResponse, ShardMetadata,
+    ClusterMetadata, ClusterMetadataRequest, ClusterTopologyInfo,
+    ClusterTopologyRequest, CollectionMetadata, JoinRequest, JoinResponse,
+    LeaveRequest, LeaveResponse, ShardMetadata,
 };
 use openraft::{BasicNode, ChangeMembers};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -22,7 +23,10 @@ impl FlareControlService {
 
 #[tonic::async_trait]
 impl FlareControl for FlareControlService {
-    async fn join(&self, request: Request<JoinRequest>) -> Result<Response<JoinResponse>, Status> {
+    async fn join(
+        &self,
+        request: Request<JoinRequest>,
+    ) -> Result<Response<JoinResponse>, Status> {
         let join_request = request.into_inner();
         let flare_node = self.flare_node.clone();
         info!("receive join request {}", &join_request.addr);
@@ -33,7 +37,8 @@ impl FlareControl for FlareControlService {
         };
         let node_id = join_request.node_id;
         map.insert(node_id, node);
-        let is_initialized = metadata_manager.raft.is_initialized().await.unwrap();
+        let is_initialized =
+            metadata_manager.raft.is_initialized().await.unwrap();
         if is_initialized {
             let change_members = ChangeMembers::AddVoters(map);
             metadata_manager

@@ -9,13 +9,12 @@ use flare_pb::ByteWrapper;
 use openraft::error::{InstallSnapshotError, NetworkError, RPCError};
 use openraft::network::RPCOption;
 use openraft::raft::{
-    AppendEntriesRequest, AppendEntriesResponse, InstallSnapshotRequest, InstallSnapshotResponse,
-    VoteRequest, VoteResponse,
+    AppendEntriesRequest, AppendEntriesResponse, InstallSnapshotRequest,
+    InstallSnapshotResponse, VoteRequest, VoteResponse,
 };
 
 use openraft::{BasicNode, RaftNetwork, RaftNetworkFactory};
 use tonic::transport::{Channel, Uri};
-use tonic::Status;
 use tracing::info;
 
 use super::typ;
@@ -34,7 +33,11 @@ impl Network {
 impl RaftNetworkFactory<MetaTypeConfig> for Network {
     type Network = NetworkConnection;
 
-    async fn new_client(&mut self, _target: NodeId, node: &BasicNode) -> NetworkConnection {
+    async fn new_client(
+        &mut self,
+        _target: NodeId,
+        node: &BasicNode,
+    ) -> NetworkConnection {
         let addr = node.addr.clone();
         let addr = Uri::from_static(Box::leak(addr.into_boxed_str()));
         info!("create grpc client for {}", addr);
@@ -76,7 +79,10 @@ impl RaftNetwork<MetaTypeConfig> for NetworkConnection {
         &mut self,
         req: InstallSnapshotRequest<MetaTypeConfig>,
         _option: RPCOption,
-    ) -> Result<InstallSnapshotResponse<NodeId>, typ::RPCError<InstallSnapshotError>> {
+    ) -> Result<
+        InstallSnapshotResponse<NodeId>,
+        typ::RPCError<InstallSnapshotError>,
+    > {
         let data = bincode::serde::encode_to_vec(&req, CONFIGURATION)
             .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
         let req = ByteWrapper { data };
@@ -85,8 +91,9 @@ impl RaftNetwork<MetaTypeConfig> for NetworkConnection {
             RPCError::Network(NetworkError::new(&err))
         })?;
         let data = response.into_inner().data;
-        let response = bincode::serde::decode_from_slice(&data[..], CONFIGURATION)
-            .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
+        let response =
+            bincode::serde::decode_from_slice(&data[..], CONFIGURATION)
+                .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
         response.0
     }
 

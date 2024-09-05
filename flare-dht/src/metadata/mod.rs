@@ -29,7 +29,8 @@ pub type FlareMetaRaft = openraft::Raft<MetaTypeConfig>;
 mod typ {
 
     use crate::raft::NodeId;
-    pub type RaftError<E = openraft::error::Infallible> = openraft::error::RaftError<NodeId, E>;
+    pub type RaftError<E = openraft::error::Infallible> =
+        openraft::error::RaftError<NodeId, E>;
     pub type RPCError<E = openraft::error::Infallible> =
         openraft::error::RPCError<NodeId, openraft::BasicNode, RaftError<E>>;
 }
@@ -62,7 +63,8 @@ impl FlareMetadataManager {
         info!("use config {:?}", config);
         let config = Arc::new(config.validate().unwrap());
         let log_store = MemLogStore::default();
-        let sm: StateMachineStore<FlareMetadataSM> = store::StateMachineStore::default();
+        let sm: StateMachineStore<FlareMetadataSM> =
+            store::StateMachineStore::default();
         let sm_arc = Arc::new(sm);
         let network = network::Network::new();
         // let network = network_tarpc::TarpcNetwork::default();
@@ -127,10 +129,13 @@ impl FlareMetadataManager {
         }
     }
 
-    pub async fn create_control_client(&self) -> Option<FlareControlClient<Channel>> {
+    pub async fn create_control_client(
+        &self,
+    ) -> Option<FlareControlClient<Channel>> {
         let sm = self.state_machine.state_machine.read().await;
         self.raft.current_leader().await.map(|node_id| {
-            let node = sm.last_membership.membership().get_node(&node_id).unwrap();
+            let node =
+                sm.last_membership.membership().get_node(&node_id).unwrap();
             let peer_addr: Uri = Uri::from_str(&node.addr).unwrap();
             let channel = Channel::builder(peer_addr).connect_lazy();
             FlareControlClient::new(channel)

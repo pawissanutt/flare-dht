@@ -2,8 +2,8 @@ use crate::raft::state_machine::{AppStateMachine, GenericStateMachineData};
 use crate::raft::NodeId;
 use openraft::storage::RaftStateMachine;
 use openraft::{
-    BasicNode, Entry, EntryPayload, LogId, RaftSnapshotBuilder, RaftTypeConfig, Snapshot,
-    SnapshotMeta, StorageError, StoredMembership,
+    BasicNode, Entry, EntryPayload, LogId, RaftSnapshotBuilder, RaftTypeConfig,
+    Snapshot, SnapshotMeta, StorageError, StoredMembership,
 };
 use std::io::Cursor;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -35,9 +35,13 @@ pub struct StateMachineStore<APP: AppStateMachine> {
     current_snapshot: RwLock<Option<StoredSnapshot>>,
 }
 
-impl<APP: AppStateMachine> RaftSnapshotBuilder<MetaTypeConfig> for Arc<StateMachineStore<APP>> {
+impl<APP: AppStateMachine> RaftSnapshotBuilder<MetaTypeConfig>
+    for Arc<StateMachineStore<APP>>
+{
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn build_snapshot(&mut self) -> Result<Snapshot<MetaTypeConfig>, StorageError<NodeId>> {
+    async fn build_snapshot(
+        &mut self,
+    ) -> Result<Snapshot<MetaTypeConfig>, StorageError<NodeId>> {
         // Serialize the data of the state machine.
         let state_machine = self.state_machine.read().await;
         let data = state_machine.to_vec()?;
@@ -50,7 +54,8 @@ impl<APP: AppStateMachine> RaftSnapshotBuilder<MetaTypeConfig> for Arc<StateMach
         let mut current_snapshot = self.current_snapshot.write().await;
         drop(state_machine);
 
-        let snapshot_idx = self.snapshot_idx.fetch_add(1, Ordering::Relaxed) + 1;
+        let snapshot_idx =
+            self.snapshot_idx.fetch_add(1, Ordering::Relaxed) + 1;
         let snapshot_id = if let Some(last) = last_applied_log {
             format!("{}-{}-{}", last.leader_id, last.index, snapshot_idx)
         } else {
@@ -77,13 +82,17 @@ impl<APP: AppStateMachine> RaftSnapshotBuilder<MetaTypeConfig> for Arc<StateMach
     }
 }
 
-impl<APP: AppStateMachine> RaftStateMachine<MetaTypeConfig> for Arc<StateMachineStore<APP>> {
+impl<APP: AppStateMachine> RaftStateMachine<MetaTypeConfig>
+    for Arc<StateMachineStore<APP>>
+{
     type SnapshotBuilder = Self;
 
     async fn applied_state(
         &mut self,
-    ) -> Result<(Option<LogId<NodeId>>, StoredMembership<NodeId, BasicNode>), StorageError<NodeId>>
-    {
+    ) -> Result<
+        (Option<LogId<NodeId>>, StoredMembership<NodeId, BasicNode>),
+        StorageError<NodeId>,
+    > {
         let state_machine = self.state_machine.read().await;
         Ok((
             state_machine.last_applied_log,
@@ -114,7 +123,8 @@ impl<APP: AppStateMachine> RaftStateMachine<MetaTypeConfig> for Arc<StateMachine
                     res.push(resp);
                 }
                 EntryPayload::Membership(ref mem) => {
-                    sm.last_membership = StoredMembership::new(Some(entry.log_id), mem.clone());
+                    sm.last_membership =
+                        StoredMembership::new(Some(entry.log_id), mem.clone());
                     res.push(FlareControlResponse::Empty)
                 }
             };
@@ -129,7 +139,10 @@ impl<APP: AppStateMachine> RaftStateMachine<MetaTypeConfig> for Arc<StateMachine
     #[tracing::instrument(level = "trace", skip(self))]
     async fn begin_receiving_snapshot(
         &mut self,
-    ) -> Result<Box<<MetaTypeConfig as RaftTypeConfig>::SnapshotData>, StorageError<NodeId>> {
+    ) -> Result<
+        Box<<MetaTypeConfig as RaftTypeConfig>::SnapshotData>,
+        StorageError<NodeId>,
+    > {
         Ok(Box::new(Cursor::new(Vec::new())))
     }
 
@@ -149,7 +162,8 @@ impl<APP: AppStateMachine> RaftStateMachine<MetaTypeConfig> for Arc<StateMachine
             data: snapshot.into_inner(),
         };
 
-        let updated_state_machine = GenericStateMachineData::load(meta, &new_snapshot.data[..])?;
+        let updated_state_machine =
+            GenericStateMachineData::load(meta, &new_snapshot.data[..])?;
         let mut state_machine = self.state_machine.write().await;
         *state_machine = updated_state_machine;
 

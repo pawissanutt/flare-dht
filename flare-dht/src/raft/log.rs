@@ -1,5 +1,8 @@
 use openraft::storage::{LogFlushed, RaftLogStorage};
-use openraft::{LogId, LogState, RaftLogId, RaftLogReader, RaftTypeConfig, StorageError, Vote};
+use openraft::{
+    LogId, LogState, RaftLogId, RaftLogReader, RaftTypeConfig, StorageError,
+    Vote,
+};
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::ops::RangeBounds;
@@ -50,7 +53,9 @@ impl<C: RaftTypeConfig> LogStoreInner<C> {
         Ok(response)
     }
 
-    async fn get_log_state(&mut self) -> Result<LogState<C>, StorageError<C::NodeId>> {
+    async fn get_log_state(
+        &mut self,
+    ) -> Result<LogState<C>, StorageError<C::NodeId>> {
         let last = self
             .log
             .iter()
@@ -84,12 +89,17 @@ impl<C: RaftTypeConfig> LogStoreInner<C> {
         Ok(self.committed)
     }
 
-    async fn save_vote(&mut self, vote: &Vote<C::NodeId>) -> Result<(), StorageError<C::NodeId>> {
+    async fn save_vote(
+        &mut self,
+        vote: &Vote<C::NodeId>,
+    ) -> Result<(), StorageError<C::NodeId>> {
         self.vote = Some(*vote);
         Ok(())
     }
 
-    async fn read_vote(&mut self) -> Result<Option<Vote<C::NodeId>>, StorageError<C::NodeId>> {
+    async fn read_vote(
+        &mut self,
+    ) -> Result<Option<Vote<C::NodeId>>, StorageError<C::NodeId>> {
         Ok(self.vote)
     }
 
@@ -111,7 +121,10 @@ impl<C: RaftTypeConfig> LogStoreInner<C> {
         Ok(())
     }
 
-    async fn truncate(&mut self, log_id: LogId<C::NodeId>) -> Result<(), StorageError<C::NodeId>> {
+    async fn truncate(
+        &mut self,
+        log_id: LogId<C::NodeId>,
+    ) -> Result<(), StorageError<C::NodeId>> {
         let keys = self
             .log
             .range(log_id.index..)
@@ -124,7 +137,10 @@ impl<C: RaftTypeConfig> LogStoreInner<C> {
         Ok(())
     }
 
-    async fn purge(&mut self, log_id: LogId<C::NodeId>) -> Result<(), StorageError<C::NodeId>> {
+    async fn purge(
+        &mut self,
+        log_id: LogId<C::NodeId>,
+    ) -> Result<(), StorageError<C::NodeId>> {
         {
             let ld = &mut self.last_purged_log_id;
             assert!(*ld <= Some(log_id));
@@ -165,7 +181,9 @@ where
 {
     type LogReader = Self;
 
-    async fn get_log_state(&mut self) -> Result<LogState<C>, StorageError<C::NodeId>> {
+    async fn get_log_state(
+        &mut self,
+    ) -> Result<LogState<C>, StorageError<C::NodeId>> {
         let mut inner = self.inner.lock().await;
         inner.get_log_state().await
     }
@@ -174,12 +192,17 @@ where
         self.clone()
     }
 
-    async fn save_vote(&mut self, vote: &Vote<C::NodeId>) -> Result<(), StorageError<C::NodeId>> {
+    async fn save_vote(
+        &mut self,
+        vote: &Vote<C::NodeId>,
+    ) -> Result<(), StorageError<C::NodeId>> {
         let mut inner = self.inner.lock().await;
         inner.save_vote(vote).await
     }
 
-    async fn read_vote(&mut self) -> Result<Option<Vote<C::NodeId>>, StorageError<C::NodeId>> {
+    async fn read_vote(
+        &mut self,
+    ) -> Result<Option<Vote<C::NodeId>>, StorageError<C::NodeId>> {
         let mut inner = self.inner.lock().await;
         inner.read_vote().await
     }
@@ -211,12 +234,18 @@ where
         inner.append(entries, callback).await
     }
 
-    async fn truncate(&mut self, log_id: LogId<C::NodeId>) -> Result<(), StorageError<C::NodeId>> {
+    async fn truncate(
+        &mut self,
+        log_id: LogId<C::NodeId>,
+    ) -> Result<(), StorageError<C::NodeId>> {
         let mut inner = self.inner.lock().await;
         inner.truncate(log_id).await
     }
 
-    async fn purge(&mut self, log_id: LogId<C::NodeId>) -> Result<(), StorageError<C::NodeId>> {
+    async fn purge(
+        &mut self,
+        log_id: LogId<C::NodeId>,
+    ) -> Result<(), StorageError<C::NodeId>> {
         let mut inner = self.inner.lock().await;
         inner.purge(log_id).await
     }

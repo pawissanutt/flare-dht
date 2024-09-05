@@ -7,11 +7,16 @@ use tonic::Status;
 
 const CONFIGURATION: Configuration = config::standard();
 
-pub fn server_decode<T: DeserializeOwned>(wrapper: &Vec<u8>) -> Result<T, Status> {
-    let result = bincode::serde::decode_from_slice::<T, Configuration>(&wrapper[..], CONFIGURATION)
-        // serde_json::from_slice(&wrapper)
-        .map_err(|_e| Status::invalid_argument("decode error"))
-        .map(|i| i.0);
+pub fn server_decode<T: DeserializeOwned>(
+    wrapper: &Vec<u8>,
+) -> Result<T, Status> {
+    let result = bincode::serde::decode_from_slice::<T, Configuration>(
+        &wrapper[..],
+        CONFIGURATION,
+    )
+    // serde_json::from_slice(&wrapper)
+    .map_err(|_e| Status::invalid_argument("decode error"))
+    .map(|i| i.0);
     result
 }
 
@@ -23,11 +28,16 @@ pub fn server_encode<T: Serialize>(data: &T) -> Result<ByteWrapper, Status> {
     result
 }
 
-pub fn client_decode<T: DeserializeOwned>(data: &Vec<u8>) -> Result<T, RPCError> {
-    let result = bincode::serde::decode_from_slice::<T, Configuration>(&data[..], CONFIGURATION)
-        // let result = serde_json::from_slice(&data[..])
-        .map_err(|e| RPCError::Network(NetworkError::new(&e)))
-        .map(|i| i.0);
+pub fn client_decode<T: DeserializeOwned>(
+    data: &Vec<u8>,
+) -> Result<T, RPCError> {
+    let result = bincode::serde::decode_from_slice::<T, Configuration>(
+        &data[..],
+        CONFIGURATION,
+    )
+    // let result = serde_json::from_slice(&data[..])
+    .map_err(|e| RPCError::Network(NetworkError::new(&e)))
+    .map(|i| i.0);
     result
 }
 

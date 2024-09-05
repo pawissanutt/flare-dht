@@ -537,6 +537,7 @@ checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 name = "flare-dht"
 version = "0.1.1"
 dependencies = [
+ "async-trait",
  "bincode",
  "clap",
  "dashmap",
@@ -553,6 +554,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
+ "tokio-stream",
  "tonic",
  "tonic-reflection",
  "tracing",
@@ -1857,6 +1859,7 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]

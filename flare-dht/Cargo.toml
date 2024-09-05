@@ -31,5 +31,7 @@ rand = "0.8"
 futures = "0.3"
 tsid = "0.3"
 flare-pb = {version = "0.1", path = "../flare-pb"}
+async-trait = "0.1.82"
+tokio-stream = { version = "0.1.15", features = ["sync"] }
 
 [dev-dependencies]

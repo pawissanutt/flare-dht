@@ -1,17 +1,23 @@
-use crate::metadata::state_machine::{FlareControlRequest, FlareControlResponse, ShardMetadata};
+use crate::metadata::state_machine::{
+    FlareControlRequest, FlareControlResponse,
+};
 use crate::metadata::FlareMetadataManager;
-use crate::shard::hashmap::HashMapShard;
-use crate::shard::ShardId;
+use crate::shard::hashmap::HashMapShardFactory;
+use crate::shard::{KvShard, ShardFactory, ShardId};
 use crate::{raft::NodeId, FlareOptions};
 use dashmap::DashMap;
 use flare_pb::flare_control_client::FlareControlClient;
-use flare_pb::{CreateCollectionRequest, CreateCollectionResponse, JoinRequest, LeaveRequest};
+use flare_pb::{
+    CreateCollectionRequest, CreateCollectionResponse, JoinRequest,
+    LeaveRequest,
+};
 use openraft::ChangeMembers;
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio_stream::StreamExt;
 use tonic::transport::{Channel, Uri};
 use tonic::Status;
 use tracing::info;
@@ -19,9 +25,10 @@ use tracing::info;
 #[derive(Clone)]
 pub struct FlareNode {
     pub metadata_manager: Arc<FlareMetadataManager>,
-    pub shards: Arc<DashMap<ShardId, Arc<HashMapShard>>>,
+    pub shards: Arc<DashMap<ShardId, Arc<dyn KvShard>>>,
     pub addr: String,
     pub node_id: NodeId,
+    pub shard_factory: Arc<dyn ShardFactory>,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -53,13 +60,31 @@ impl FlareNode {
         let node_id = options.get_node_id();
         info!("use node_id: {node_id}");
         let addr = options.get_addr();
-        let meta_raft = FlareMetadataManager::new(node_id).await;
+        let mm = Arc::new(FlareMetadataManager::new(node_id).await);
         FlareNode {
             shards: Arc::new(shards),
-            metadata_manager: Arc::new(meta_raft),
+            metadata_manager: mm,
             addr,
             node_id,
+            shard_factory: Arc::new(HashMapShardFactory {}),
         }
+    }
+
+    pub fn start_watch_stream(self: Arc<Self>) {
+        let mut rs = tokio_stream::wrappers::WatchStream::new(
+            self.metadata_manager.raft.data_metrics(),
+        );
+        tokio::spawn(async move {
+            let mut last_sync = 0;
+            while let Some(d) = rs.next().await {
+                if let Some(la) = d.last_applied {
+                    if la.index > last_sync {
+                        last_sync = la.index;
+                        self.sync_shard().await;
+                    }
+                }
+            }
+        });
     }
 
     pub async fn init_leader(&self) -> Result<(), Box<dyn Error>> {
@@ -146,17 +171,6 @@ impl FlareNode {
         info!("flare leave group");
     }
 
-    fn create_shard(&self, shard_metadata: ShardMetadata) -> Arc<HashMapShard> {
-        info!("create shard {:?}", &shard_metadata);
-        let shard = HashMapShard {
-            shard_metadata: shard_metadata,
-            ..Default::default()
-        };
-        let shard = Arc::new(shard);
-        self.shards.insert(shard.shard_id(), shard.clone());
-        shard
-    }
-
     pub async fn sync_shard(&self) {
         info!("sync shard");
         let sm = self
@@ -172,7 +186,8 @@ impl FlareNode {
             .filter(|shard| shard.primary.unwrap_or(0) == self.node_id)
             .filter(|shard| !self.shards.contains_key(&shard.id));
         for s in local_shards {
-            self.create_shard(s.clone());
+            let shard = self.shard_factory.create_shard(s.clone());
+            self.shards.insert(shard.shard_id(), shard);
         }
     }
 
@@ -180,7 +195,7 @@ impl FlareNode {
         &self,
         collection: &str,
         key: &str,
-    ) -> Result<Arc<HashMapShard>, FlareError> {
+    ) -> Result<Arc<dyn KvShard>, FlareError> {
         let option = self.metadata_manager.get_shard_id(collection, key).await;
         if let Some(shard_id) = option {
             if let Some(shard) = self.shards.get(&shard_id) {
@@ -204,7 +219,8 @@ impl FlareNode {
         }
         if request.shard_assignments.len() != request.shard_count as usize {
             let node_id = self.node_id;
-            request.shard_assignments = vec![node_id].repeat(request.shard_count as usize);
+            request.shard_assignments =
+                vec![node_id].repeat(request.shard_count as usize);
         }
         let req = FlareControlRequest::CreateCollection(request);
         let resp = self
@@ -213,8 +229,9 @@ impl FlareNode {
             .client_write(req)
             .await
             .map_err(|e| FlareError::UnknownError(Box::new(e)))?;
-        if let FlareControlResponse::CollectionCreated { meta } = resp.response() {
-            self.sync_shard().await;
+        if let FlareControlResponse::CollectionCreated { meta } =
+            resp.response()
+        {
             Ok(CreateCollectionResponse {
                 name: meta.name.clone(),
             })

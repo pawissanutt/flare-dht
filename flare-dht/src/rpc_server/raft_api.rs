@@ -17,7 +17,10 @@ impl FlareMetaRaftService {
 
 #[tonic::async_trait]
 impl FlareMetadataRaft for FlareMetaRaftService {
-    async fn vote(&self, request: Request<ByteWrapper>) -> Result<Response<ByteWrapper>, Status> {
+    async fn vote(
+        &self,
+        request: Request<ByteWrapper>,
+    ) -> Result<Response<ByteWrapper>, Status> {
         let flare = self.flare_node.clone();
         let wrapper = request.into_inner();
         let mm = flare.metadata_manager.clone();
@@ -46,7 +49,10 @@ impl FlareMetadataRaft for FlareMetaRaftService {
         Ok(Response::new(server_encode(&result)?))
     }
 
-    async fn append(&self, request: Request<ByteWrapper>) -> Result<Response<ByteWrapper>, Status> {
+    async fn append(
+        &self,
+        request: Request<ByteWrapper>,
+    ) -> Result<Response<ByteWrapper>, Status> {
         let flare = self.flare_node.clone();
         let wrapper = request.into_inner();
         let mm = flare.metadata_manager.clone();

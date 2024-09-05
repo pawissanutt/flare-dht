@@ -1,9 +1,11 @@
-use crate::raft::state_machine::AppStateMachine;
+use crate::{raft::state_machine::AppStateMachine, shard::ShardMetadata};
 use flare_pb::CreateCollectionRequest;
 use rancor::Error;
 use std::collections::BTreeMap;
 
-#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Debug, Default, Clone)]
+#[derive(
+    rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Debug, Default, Clone,
+)]
 #[rkyv(compare(PartialEq), check_bytes, derive(Debug))]
 pub struct FlareMetadataSM {
     pub collections: BTreeMap<String, CollectionMetadata>,
@@ -24,12 +26,17 @@ impl AppStateMachine for FlareMetadataSM {
 }
 
 impl FlareMetadataSM {
-    fn create_collection(&mut self, req: &CreateCollectionRequest) -> FlareControlResponse {
+    fn create_collection(
+        &mut self,
+        req: &CreateCollectionRequest,
+    ) -> FlareControlResponse {
         let name = &req.name;
         let shard_count = req.shard_count;
         // let shard_assignment =
         if self.collections.contains_key(name) {
-            return FlareControlResponse::Rejected("collection already exist".to_string());
+            return FlareControlResponse::Rejected(
+                "collection already exist".to_string(),
+            );
         }
         // let shards = Vec::with_capacity(shard_count as usize);
         let mut shard_ids = Vec::with_capacity(shard_count as usize);
@@ -55,15 +62,6 @@ impl FlareMetadataSM {
         self.collections.insert(name.into(), col_meta.clone());
         FlareControlResponse::CollectionCreated { meta: col_meta }
     }
-}
-
-#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Debug, Default, Clone)]
-#[rkyv(compare(PartialEq), check_bytes, derive(Debug))]
-pub struct ShardMetadata {
-    pub id: u64,
-    pub collection: String,
-    pub primary: Option<u64>,
-    pub replica: Vec<u64>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
@@ -96,8 +94,8 @@ pub struct CollectionMetadata {
     pub replication: u8,
 }
 
-impl<A: crate::raft::state_machine::AppStateMachine> crate::raft::state_machine::RaftCommand<A>
-    for FlareControlRequest
+impl<A: crate::raft::state_machine::AppStateMachine>
+    crate::raft::state_machine::RaftCommand<A> for FlareControlRequest
 {
     type Response = FlareControlResponse;
 
@@ -109,9 +107,13 @@ impl<A: crate::raft::state_machine::AppStateMachine> crate::raft::state_machine:
         let value_any = app_data as &mut dyn std::any::Any;
         match value_any.downcast_mut::<FlareMetadataSM>() {
             Some(app_state) => match self {
-                FlareControlRequest::CreateCollection(req) => app_state.create_collection(req),
+                FlareControlRequest::CreateCollection(req) => {
+                    app_state.create_collection(req)
+                }
             },
-            None => panic!("App state is not KVAppStateMachine"),
+            None => {
+                panic!("App state is not KVAppStateMachine")
+            }
         }
         // todo!()
     }

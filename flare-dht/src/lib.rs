@@ -1,3 +1,4 @@
+pub use cluster::FlareNode;
 use std::{
     error::Error,
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -5,13 +6,13 @@ use std::{
 };
 
 use clap::Parser;
-use cluster::FlareNode;
 use flare_pb::{
     flare_control_server::FlareControlServer, flare_kv_server::FlareKvServer,
     flare_metadata_raft_server::FlareMetadataRaftServer,
 };
 use rpc_server::{
-    control_api::FlareControlService, kv_api::FlareKvService, raft_api::FlareMetaRaftService,
+    control_api::FlareControlService, kv_api::FlareKvService,
+    raft_api::FlareMetaRaftService,
 };
 use tonic::transport::Server;
 use tracing::info;
@@ -60,7 +61,9 @@ impl FlareOptions {
     }
 }
 
-pub async fn start_server(options: FlareOptions) -> Result<Arc<FlareNode>, Box<dyn Error>> {
+pub async fn start_server(
+    options: FlareOptions,
+) -> Result<Arc<FlareNode>, Box<dyn Error>> {
     info!("use option {options:?}");
     let flare_node = FlareNode::new(options.clone()).await;
     if options.leader {
@@ -68,12 +71,15 @@ pub async fn start_server(options: FlareOptions) -> Result<Arc<FlareNode>, Box<d
     }
     let shared_node = Arc::new(flare_node);
     let flare_node = shared_node.clone();
+    flare_node.start_watch_stream();
+    let flare_node = shared_node.clone();
     let flare_kv = FlareKvService::new(shared_node.clone());
     let flare_meta_raft = FlareMetaRaftService::new(shared_node.clone());
     let flare_control = FlareControlService::new(shared_node.clone());
 
     // let socket: SocketAddr = options.addr.parse()?;
-    let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), options.port);
+    let socket =
+        SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), options.port);
     info!("start on {}", socket);
     let reflection_server = tonic_reflection::server::Builder::configure()
         .register_encoded_file_descriptor_set(flare_pb::FILE_DESCRIPTOR_SET)

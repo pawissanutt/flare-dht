@@ -3,10 +3,15 @@ use flare_pb::{CreateCollectionRequest, SetRequest, SingleKeyRequest};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let col_name = std::env::args()
+        .nth(1)
+        .unwrap_or("default".into())
+        .parse::<String>()
+        .unwrap();
     let mut client = FlareKvClient::connect("http://127.0.0.1:8001").await?;
 
     let req = tonic::Request::new(CreateCollectionRequest {
-        name: "test".into(),
+        name: col_name.clone(),
         shard_count: 1,
         ..Default::default()
     });
@@ -24,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let req = tonic::Request::new(SetRequest {
         key: "foo".into(),
         value: "bar".into(),
-        collection: "test".into(),
+        collection: col_name.clone(),
     });
 
     print!("SET: {:?}\n", req);
@@ -33,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let req = tonic::Request::new(SingleKeyRequest {
         key: "foo".into(),
-        collection: "test".into(),
+        collection: col_name.clone(),
     });
 
     print!("GET: {:?}\n", req);

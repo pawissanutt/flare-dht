@@ -19,11 +19,15 @@ pub enum FlareRpcError {
 impl From<Status> for FlareRpcError {
     fn from(value: Status) -> Self {
         match value.code() {
-            _ => FlareRpcError::Other(value.code() as u32, value.message().into()),
+            _ => FlareRpcError::Other(
+                value.code() as u32,
+                value.message().into(),
+            ),
         }
     }
 }
 
-pub type RaftError<E = openraft::error::Infallible> = openraft::error::RaftError<NodeId, E>;
+pub type RaftError<E = openraft::error::Infallible> =
+    openraft::error::RaftError<NodeId, E>;
 pub type RPCError<E = openraft::error::Infallible> =
     openraft::error::RPCError<NodeId, BasicNode, RaftError<E>>;

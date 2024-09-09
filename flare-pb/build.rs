@@ -8,6 +8,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build_server(true)
         .file_descriptor_set_path(out_dir.join("flare_descriptor.bin"))
         .type_attribute(".", "#[derive(serde::Serialize,serde::Deserialize)]")
+        .protoc_arg("--experimental_allow_proto3_optional")
         .compile(
             &[
                 "proto/flare-common.proto",

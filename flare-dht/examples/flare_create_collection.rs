@@ -3,8 +3,13 @@ use flare_pb::{CreateCollectionRequest, SetRequest, SingleKeyRequest};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let col_name = std::env::args()
+    let shard_count = std::env::args()
         .nth(1)
+        .unwrap_or("1".into())
+        .parse::<i32>()
+        .unwrap();
+    let col_name = std::env::args()
+        .nth(2)
         .unwrap_or("default".into())
         .parse::<String>()
         .unwrap();
@@ -12,7 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let req = tonic::Request::new(CreateCollectionRequest {
         name: col_name.clone(),
-        shard_count: 1,
+        shard_count: shard_count,
         ..Default::default()
     });
     print!("CREATE COLLECTION: {:?}\n", req);

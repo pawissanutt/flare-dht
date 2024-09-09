@@ -1,16 +1,21 @@
+use crate::error::{FlareError, FlareInternalError};
 use crate::metadata::state_machine::{
     FlareControlRequest, FlareControlResponse,
 };
 use crate::metadata::FlareMetadataManager;
-use crate::shard::hashmap::HashMapShardFactory;
+use crate::pool::ClientPool;
+use crate::raft::NodeId;
+use crate::shard::HashMapShardFactory;
 use crate::shard::{KvShard, ShardFactory, ShardId};
-use crate::{raft::NodeId, FlareOptions};
+use crate::ServerArgs;
 use dashmap::DashMap;
 use flare_pb::flare_control_client::FlareControlClient;
+use flare_pb::flare_kv_client::FlareKvClient;
 use flare_pb::{
     CreateCollectionRequest, CreateCollectionResponse, JoinRequest,
     LeaveRequest,
 };
+
 use openraft::ChangeMembers;
 use std::collections::BTreeMap;
 use std::error::Error;
@@ -19,7 +24,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio_stream::StreamExt;
 use tonic::transport::{Channel, Uri};
-use tonic::Status;
+use tonic::{client, Status};
 use tracing::info;
 
 #[derive(Clone)]
@@ -29,44 +34,32 @@ pub struct FlareNode {
     pub addr: String,
     pub node_id: NodeId,
     pub shard_factory: Arc<dyn ShardFactory>,
+    pub client_pool: ClientPool,
+    close_signal_sender: tokio::sync::watch::Sender<bool>,
+    close_signal_receiver: tokio::sync::watch::Receiver<bool>,
 }
 
-#[derive(thiserror::Error, Debug)]
-pub enum FlareError {
-    #[error("No shard `{0}` on current node")]
-    NoShardFound(ShardId),
-    #[error("No collection `{0}` in cluster")]
-    NoCollection(String),
-    #[error("Invalid: {0}")]
-    InvalidArgument(String),
-    #[error("Invalid: {0}")]
-    UnknownError(#[from] Box<dyn Error + Send + Sync + 'static>),
-}
 
-impl From<FlareError> for tonic::Status {
-    fn from(value: FlareError) -> Self {
-        match value {
-            FlareError::InvalidArgument(msg) => Status::invalid_argument(msg),
-            FlareError::UnknownError(e) => Status::from_error(e),
-            _ => Status::not_found(value.to_string()),
-        }
-    }
-}
 
 impl FlareNode {
     // #[tracing::instrument]
-    pub async fn new(options: FlareOptions) -> Self {
+    pub async fn new(options: ServerArgs) -> Self {
         let shards = DashMap::new();
         let node_id = options.get_node_id();
         info!("use node_id: {node_id}");
         let addr = options.get_addr();
         let mm = Arc::new(FlareMetadataManager::new(node_id).await);
+        let pool = ClientPool::new(mm.clone());
+        let (tx, rx) = tokio::sync::watch::channel(false);
         FlareNode {
             shards: Arc::new(shards),
             metadata_manager: mm,
             addr,
             node_id,
             shard_factory: Arc::new(HashMapShardFactory {}),
+            client_pool: pool,
+            close_signal_sender: tx,
+            close_signal_receiver: rx,
         }
     }
 
@@ -74,13 +67,33 @@ impl FlareNode {
         let mut rs = tokio_stream::wrappers::WatchStream::new(
             self.metadata_manager.raft.data_metrics(),
         );
+        let mut close_rs = tokio_stream::wrappers::WatchStream::new(self.close_signal_receiver.clone());
         tokio::spawn(async move {
             let mut last_sync = 0;
-            while let Some(d) = rs.next().await {
-                if let Some(la) = d.last_applied {
-                    if la.index > last_sync {
-                        last_sync = la.index;
-                        self.sync_shard().await;
+            loop {
+                // tokio::select! {
+                //     Some(d) = rs.next() => {
+                //         info!("event!!!");
+                //         if let Some(la) = d.last_applied {
+                //             if la.index > last_sync {
+                //                 last_sync = la.index;
+                //                 self.sync_shard().await;
+                //             }
+                //         }
+                //     },
+                //     // Some(_) = close_rs.next() => break,
+                //     else => break,
+                // }
+                if let Some(d) = rs.next().await {
+                    if let Some(la) = d.last_applied {
+                        if la.index > last_sync {
+                            last_sync = la.index;
+                            self.sync_shard().await;
+                        }
+                    }
+                    if self.close_signal_receiver.has_changed().unwrap_or(true){
+                        info!("closed watch loop");
+                        break;
                     }
                 }
             }
@@ -171,8 +184,13 @@ impl FlareNode {
         info!("flare leave group");
     }
 
+    pub async fn close(&self) {
+        self.leave().await;
+        self.close_signal_sender.send(true).unwrap();
+    }
+
     pub async fn sync_shard(&self) {
-        info!("sync shard");
+        tracing::debug!("sync shard");
         let sm = self
             .metadata_manager
             .state_machine
@@ -187,7 +205,7 @@ impl FlareNode {
             .filter(|shard| !self.shards.contains_key(&shard.id));
         for s in local_shards {
             let shard = self.shard_factory.create_shard(s.clone());
-            self.shards.insert(shard.shard_id(), shard);
+            self.shards.insert(shard.meta().id, shard);
         }
     }
 
@@ -216,6 +234,12 @@ impl FlareNode {
             return Err(FlareError::InvalidArgument(
                 "shard count must be positive".into(),
             ));
+        }
+        if !self.metadata_manager.is_leader().await {
+            let leader_channel = self.client_pool.get_leader().await?;
+            let mut client = FlareKvClient::new(leader_channel);
+            let resp = client.create_collection(request).await?;;
+            return Ok(resp.into_inner());
         }
         if request.shard_assignments.len() != request.shard_count as usize {
             let node_id = self.node_id;

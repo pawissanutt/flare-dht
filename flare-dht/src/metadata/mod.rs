@@ -7,6 +7,7 @@ mod test;
 use openraft::Config;
 use state_machine::{CollectionMetadata, FlareMetadataSM};
 use std::str::FromStr;
+use std::u32;
 use std::{io::Cursor, sync::Arc};
 use store::StateMachineStore;
 use tonic::transport::{Channel, Uri};
@@ -14,6 +15,7 @@ use tracing::info;
 
 use flare_pb::flare_control_client::FlareControlClient;
 
+use crate::error::FlareInternalError;
 use crate::raft::log::MemLogStore;
 use crate::raft::NodeId;
 
@@ -48,7 +50,8 @@ pub struct FlareMetadataManager {
 fn resolve_shard_id(meta: &CollectionMetadata, key: &str) -> Option<u64> {
     let hashed = mur3::murmurhash3_x86_32(key.as_bytes(), meta.seed) as u32;
     let shard_count = meta.shard_ids.len();
-    let shard_index = hashed / (u32::MAX / shard_count as u32);
+    let size = u32::div_ceil(u32::MAX , shard_count as u32);
+    let shard_index = hashed / size;
     Some(meta.shard_ids[shard_index as usize])
 }
 
@@ -129,6 +132,13 @@ impl FlareMetadataManager {
         }
     }
 
+    
+
+    #[inline]
+    pub async fn get_leader_id(&self) -> Result<u64, FlareInternalError> {
+       self.raft.current_leader().await.ok_or(FlareInternalError::NoLeader)
+    }
+
     pub async fn create_control_client(
         &self,
     ) -> Option<FlareControlClient<Channel>> {
@@ -141,20 +151,35 @@ impl FlareMetadataManager {
             FlareControlClient::new(channel)
         })
     }
+
+    
+
+    pub async fn get_node_addr(
+        &self, 
+        node_id: NodeId
+    ) -> Option<String> {
+        let sm = self.state_machine.state_machine.read().await;
+        if let Some(node) = sm.last_membership.membership().get_node(&node_id){
+            Some(node.addr.clone())
+        } else {
+            None
+        }
+    }
 }
 
 #[test]
 pub fn test_resolve_shard2() -> Result<(), Box<dyn std::error::Error>> {
+    let shard_count = 256;
     let meta = CollectionMetadata {
         name: "test".into(),
-        shard_ids: (0..1).collect(),
+        shard_ids: (0..shard_count).collect(),
         replication: 1,
         seed: rand::random(),
     };
-    for i in 0..10000 {
+    for i in 0..1000000 {
         let option = resolve_shard_id(&meta, &format!("test-{}", i));
         assert_ne!(option, None);
-        assert!(option.unwrap() < 1)
+        assert!(option.unwrap() < shard_count)
     }
     Ok(())
 }

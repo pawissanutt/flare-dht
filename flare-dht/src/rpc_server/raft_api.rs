@@ -1,4 +1,5 @@
 use crate::cluster::FlareNode;
+use crate::metadata::FlareMetadataManager;
 use crate::util::{server_decode, server_encode};
 use flare_pb::flare_metadata_raft_server::FlareMetadataRaft;
 use flare_pb::ByteWrapper;
@@ -7,11 +8,13 @@ use tonic::{Request, Response, Status};
 
 pub struct FlareMetaRaftService {
     flare_node: Arc<FlareNode>,
+    mm: Arc<FlareMetadataManager>,
 }
 
 impl FlareMetaRaftService {
     pub fn new(node: Arc<FlareNode>) -> Self {
-        FlareMetaRaftService { flare_node: node }
+        let node_clone = node.clone();
+        FlareMetaRaftService { flare_node: node_clone, mm: node.metadata_manager.clone()}
     }
 }
 
@@ -21,11 +24,9 @@ impl FlareMetadataRaft for FlareMetaRaftService {
         &self,
         request: Request<ByteWrapper>,
     ) -> Result<Response<ByteWrapper>, Status> {
-        let flare = self.flare_node.clone();
         let wrapper = request.into_inner();
-        let mm = flare.metadata_manager.clone();
         let req = server_decode(&wrapper.data)?;
-        let result = mm
+        let result = self.mm
             .raft
             .vote(req)
             .await
@@ -37,11 +38,9 @@ impl FlareMetadataRaft for FlareMetaRaftService {
         &self,
         request: Request<ByteWrapper>,
     ) -> Result<Response<ByteWrapper>, Status> {
-        let flare = self.flare_node.clone();
         let wrapper = request.into_inner();
-        let mm = flare.metadata_manager.clone();
         let req = server_decode(&wrapper.data)?;
-        let result = mm
+        let result = self.mm
             .raft
             .install_snapshot(req)
             .await
@@ -53,11 +52,9 @@ impl FlareMetadataRaft for FlareMetaRaftService {
         &self,
         request: Request<ByteWrapper>,
     ) -> Result<Response<ByteWrapper>, Status> {
-        let flare = self.flare_node.clone();
         let wrapper = request.into_inner();
-        let mm = flare.metadata_manager.clone();
         let req = server_decode(&wrapper.data)?;
-        let result = mm
+        let result = self.mm
             .raft
             .append_entries(req)
             .await

@@ -3,29 +3,29 @@ use std::sync::Arc;
 use dashmap::DashMap;
 use tracing::info;
 
-use crate::cluster::FlareError;
+use crate::error::FlareError;
 
-use super::{KvShard, ShardFactory, ShardId, ShardMetadata};
+use super::{KvShard, ShardFactory, ShardId, ShardMetadata, ShardEntry};
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 pub struct HashMapShard {
     pub shard_metadata: ShardMetadata,
-    pub map: DashMap<String, Vec<u8>>,
+    pub map: DashMap<String, ShardEntry>,
 }
 
 #[async_trait::async_trait]
 impl KvShard for HashMapShard {
-    fn shard_id(&self) -> ShardId {
-        self.shard_metadata.id
+    fn meta(&self) -> &ShardMetadata {
+        &self.shard_metadata
     }
 
-    async fn get(&self, key: &String) -> Option<Vec<u8>> {
+    async fn get(&self, key: &String) -> Option<ShardEntry> {
         let out = self.map.get(key);
         out.map(|r| r.clone())
     }
 
-    async fn set(&self, key: String, value: Vec<u8>) -> Result<(), FlareError> {
+    async fn set(&self, key: String, value: ShardEntry) -> Result<(), FlareError> {
         self.map.insert(key, value);
         Ok(())
     }

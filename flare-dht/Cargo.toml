@@ -7,7 +7,8 @@ description = "The learning project to create the distributed KV database in Rus
 license = "Apache-2.0"
 
 [features]
-
+"default" = ["cluster"]
+"cluster" = []
 
 [dependencies]
 dashmap = "6.0"
@@ -33,5 +34,15 @@ tsid = "0.3"
 flare-pb = {version = "0.1", path = "../flare-pb"}
 async-trait = "0.1.82"
 tokio-stream = { version = "0.1.15", features = ["sync"] }
+http = "1"
 
 [dev-dependencies]
+criterion = { version = "0.5.1", features = ["async_futures", "async_tokio", "html_reports", "tokio"] }
+
+[[bench]]
+name = "write_benchmark"
+harness = false
+
+[profile.release]
+lto = true
+codegen-units = 1

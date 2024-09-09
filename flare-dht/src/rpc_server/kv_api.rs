@@ -1,20 +1,20 @@
 use crate::cluster::FlareNode;
 use flare_pb::flare_kv_server::FlareKv;
 use flare_pb::{
-    CleanRequest, CleanResponse, CreateCollectionRequest,
-    CreateCollectionResponse, EmptyResponse, GetTopologyRequest, SetRequest,
-    SingleKeyRequest, TopologyInfo, ValueResponse,
+    CreateCollectionRequest, CreateCollectionResponse, EmptyResponse,
+    GetTopologyRequest, SetRequest, SingleKeyRequest, TopologyInfo,
+    ValueResponse,
 };
 use std::sync::Arc;
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
+use crate::shard::ShardEntry;
 
 pub struct FlareKvService {
     flare_node: Arc<FlareNode>,
 }
 
 impl FlareKvService {
-    #[allow(dead_code)]
     pub(crate) fn new(flare_node: Arc<FlareNode>) -> FlareKvService {
         FlareKvService { flare_node }
     }
@@ -34,7 +34,7 @@ impl FlareKv for FlareKvService {
         if let Some(val) = shard.get(&key_request.key).await {
             Ok(Response::new(ValueResponse {
                 key: key_request.key,
-                value: val,
+                value: val.value,
             }))
         } else {
             Err(Status::not_found("not found data"))
@@ -63,15 +63,8 @@ impl FlareKv for FlareKvService {
             .flare_node
             .get_shard(&set_request.collection, &set_request.key)
             .await?;
-        shard.set(set_request.key, set_request.value).await?;
+        shard.set(set_request.key, ShardEntry::from(set_request.value)).await?;
         Ok(Response::new(EmptyResponse::default()))
-    }
-
-    async fn clean(
-        &self,
-        _request: Request<CleanRequest>,
-    ) -> Result<Response<CleanResponse>, Status> {
-        todo!()
     }
 
     async fn get_topology(

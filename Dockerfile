@@ -19,3 +19,4 @@ FROM debian:stable-slim AS runtime
 WORKDIR /app
 COPY --from=builder /app/app /usr/local/bin/
 ENTRYPOINT ["/usr/local/bin/app"]
+CMD [ "server", "-p", "80"]

@@ -1,6 +1,6 @@
 [package]
 name = "flare-dht"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 repository = "https://github.com/pawissanutt/flare-dht"
 description = "The learning project to create the distributed KV database in Rust language."
@@ -31,7 +31,7 @@ rancor = "0.1.0-alpha.10"
 rand = "0.8"
 futures = "0.3"
 tsid = "0.3"
-flare-pb = {version = "0.1", path = "../flare-pb"}
+flare-pb = {version = "0.1.1", path = "../flare-pb"}
 async-trait = "0.1.82"
 tokio-stream = { version = "0.1.15", features = ["sync"] }
 http = "1"

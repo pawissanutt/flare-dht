@@ -5,7 +5,7 @@ use tracing::info;
 
 use crate::error::FlareError;
 
-use super::{KvShard, ShardFactory, ShardId, ShardMetadata, ShardEntry};
+use super::{KvShard, ShardEntry, ShardFactory, ShardMetadata};
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
@@ -25,7 +25,11 @@ impl KvShard for HashMapShard {
         out.map(|r| r.clone())
     }
 
-    async fn set(&self, key: String, value: ShardEntry) -> Result<(), FlareError> {
+    async fn set(
+        &self,
+        key: String,
+        value: ShardEntry,
+    ) -> Result<(), FlareError> {
         self.map.insert(key, value);
         Ok(())
     }

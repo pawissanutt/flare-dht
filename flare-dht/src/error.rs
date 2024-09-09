@@ -4,9 +4,6 @@ use tonic::Status;
 
 use crate::{raft::NodeId, shard::ShardId};
 
-
-
-
 #[derive(thiserror::Error, Debug)]
 pub enum FlareInternalError {
     #[error("Uri parsing error: {0}")]
@@ -16,7 +13,6 @@ pub enum FlareInternalError {
     #[error("No leader")]
     NoLeader,
 }
-
 
 #[derive(thiserror::Error, Debug)]
 pub enum FlareError {

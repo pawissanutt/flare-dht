@@ -1,11 +1,11 @@
 use flare_pb::flare_kv_client::FlareKvClient;
 use flare_pb::SetRequest;
+use rand::Rng;
 use std::error::Error;
 use std::time::SystemTime;
-use rand::Rng;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>>{
+async fn main() -> Result<(), Box<dyn Error>> {
     let threads = std::env::args()
         .nth(1)
         .unwrap_or("1".into())
@@ -23,12 +23,12 @@ async fn main() -> Result<(), Box<dyn Error>>{
         .unwrap();
     let mut joins = Vec::with_capacity(threads);
     let start = SystemTime::now();
-    
+
     for i in 0..threads {
         let j = tokio::spawn(async move {
             let mut client = FlareKvClient::connect("http://127.0.0.1:8001")
-            .await
-            .unwrap();
+                .await
+                .unwrap();
             let value: Vec<u8> = rand::thread_rng()
                 .sample_iter(&rand::distributions::Alphanumeric)
                 .take(size)

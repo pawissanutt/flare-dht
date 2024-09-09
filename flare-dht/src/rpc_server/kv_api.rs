@@ -1,4 +1,5 @@
 use crate::cluster::FlareNode;
+use crate::shard::ShardEntry;
 use flare_pb::flare_kv_server::FlareKv;
 use flare_pb::{
     CreateCollectionRequest, CreateCollectionResponse, EmptyResponse,
@@ -8,7 +9,6 @@ use flare_pb::{
 use std::sync::Arc;
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
-use crate::shard::ShardEntry;
 
 pub struct FlareKvService {
     flare_node: Arc<FlareNode>,
@@ -63,7 +63,9 @@ impl FlareKv for FlareKvService {
             .flare_node
             .get_shard(&set_request.collection, &set_request.key)
             .await?;
-        shard.set(set_request.key, ShardEntry::from(set_request.value)).await?;
+        shard
+            .set(set_request.key, ShardEntry::from(set_request.value))
+            .await?;
         Ok(Response::new(EmptyResponse::default()))
     }
 

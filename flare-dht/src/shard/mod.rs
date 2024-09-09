@@ -23,24 +23,26 @@ pub struct ShardMetadata {
 pub trait KvShard: Send + Sync {
     fn meta(&self) -> &ShardMetadata;
     async fn get(&self, key: &String) -> Option<ShardEntry>;
-    async fn set(&self, key: String, value: ShardEntry) -> Result<(), FlareError>;
+    async fn set(
+        &self,
+        key: String,
+        value: ShardEntry,
+    ) -> Result<(), FlareError>;
     async fn delete(&self, key: &String) -> Result<(), FlareError>;
 }
 
-#[derive(Debug, Default, Clone,)]
+#[derive(Debug, Default, Clone)]
 pub struct ShardEntry {
     pub rc: u16,
-    pub value: Vec<u8>
+    pub value: Vec<u8>,
 }
 
 impl From<Vec<u8>> for ShardEntry {
     #[inline]
     fn from(v: Vec<u8>) -> Self {
-        ShardEntry{rc: 1 , value: v}
+        ShardEntry { rc: 1, value: v }
     }
 }
-
-
 
 pub trait ShardFactory: Send + Sync {
     fn create_shard(&self, shard_metadata: ShardMetadata) -> Arc<dyn KvShard>;

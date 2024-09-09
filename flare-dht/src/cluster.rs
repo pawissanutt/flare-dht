@@ -1,4 +1,4 @@
-use crate::error::{FlareError, FlareInternalError};
+use crate::error::FlareError;
 use crate::metadata::state_machine::{
     FlareControlRequest, FlareControlResponse,
 };
@@ -24,7 +24,6 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio_stream::StreamExt;
 use tonic::transport::{Channel, Uri};
-use tonic::{client, Status};
 use tracing::info;
 
 #[derive(Clone)]
@@ -38,8 +37,6 @@ pub struct FlareNode {
     close_signal_sender: tokio::sync::watch::Sender<bool>,
     close_signal_receiver: tokio::sync::watch::Receiver<bool>,
 }
-
-
 
 impl FlareNode {
     // #[tracing::instrument]
@@ -67,7 +64,9 @@ impl FlareNode {
         let mut rs = tokio_stream::wrappers::WatchStream::new(
             self.metadata_manager.raft.data_metrics(),
         );
-        let mut close_rs = tokio_stream::wrappers::WatchStream::new(self.close_signal_receiver.clone());
+        // let close_rs = tokio_stream::wrappers::WatchStream::new(
+        //     self.close_signal_receiver.clone(),
+        // );
         tokio::spawn(async move {
             let mut last_sync = 0;
             loop {
@@ -91,7 +90,8 @@ impl FlareNode {
                             self.sync_shard().await;
                         }
                     }
-                    if self.close_signal_receiver.has_changed().unwrap_or(true){
+                    if self.close_signal_receiver.has_changed().unwrap_or(true)
+                    {
                         info!("closed watch loop");
                         break;
                     }
@@ -238,7 +238,7 @@ impl FlareNode {
         if !self.metadata_manager.is_leader().await {
             let leader_channel = self.client_pool.get_leader().await?;
             let mut client = FlareKvClient::new(leader_channel);
-            let resp = client.create_collection(request).await?;;
+            let resp = client.create_collection(request).await?;
             return Ok(resp.into_inner());
         }
         if request.shard_assignments.len() != request.shard_count as usize {

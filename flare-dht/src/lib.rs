@@ -18,14 +18,14 @@ use tracing::info;
 
 #[cfg(feature = "cluster")]
 pub mod cluster;
+mod error;
 mod metadata;
+mod pool;
 mod raft;
 #[cfg(feature = "cluster")]
 pub mod rpc_server;
 pub mod shard;
 mod util;
-mod pool;
-mod error;
 
 #[derive(clap::Parser, Clone, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -100,15 +100,21 @@ pub async fn start_server(
             options.port,
         );
         info!("start on {}", socket);
-        let reflection_server_v1a = tonic_reflection::server::Builder::configure()
-            .register_encoded_file_descriptor_set(flare_pb::FILE_DESCRIPTOR_SET)
-            .build_v1alpha()
-            .unwrap();
-        
-        let reflection_server_v1 = tonic_reflection::server::Builder::configure()
-            .register_encoded_file_descriptor_set(flare_pb::FILE_DESCRIPTOR_SET)
-            .build_v1()
-            .unwrap();
+        let reflection_server_v1a =
+            tonic_reflection::server::Builder::configure()
+                .register_encoded_file_descriptor_set(
+                    flare_pb::FILE_DESCRIPTOR_SET,
+                )
+                .build_v1alpha()
+                .unwrap();
+
+        let reflection_server_v1 =
+            tonic_reflection::server::Builder::configure()
+                .register_encoded_file_descriptor_set(
+                    flare_pb::FILE_DESCRIPTOR_SET,
+                )
+                .build_v1()
+                .unwrap();
         drop(flare_node);
 
         if let Some(addr) = options.peer_addr {

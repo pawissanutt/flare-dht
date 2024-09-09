@@ -5,7 +5,6 @@ use flare_pb::{
     ClusterTopologyRequest, CollectionMetadata, JoinRequest, JoinResponse,
     LeaveRequest, LeaveResponse, ShardMetadata,
 };
-use crate::error::FlareError;
 use openraft::{BasicNode, ChangeMembers};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
@@ -30,9 +29,10 @@ impl FlareControl for FlareControlService {
     ) -> Result<Response<JoinResponse>, Status> {
         let join_request = request.into_inner();
         info!("receive join request {}", &join_request.addr);
-        let mm = self.flare_node.metadata_manager.clone();   
+        let mm = self.flare_node.metadata_manager.clone();
         if !mm.is_leader().await {
-            let mut cc = self.flare_node.client_pool.get_control_client().await?;
+            let mut cc =
+                self.flare_node.client_pool.get_control_client().await?;
             return cc.join(join_request).await;
         }
 
@@ -42,12 +42,10 @@ impl FlareControl for FlareControlService {
         };
         let node_id = join_request.node_id;
         map.insert(node_id, node);
-        let is_initialized =
-            mm.raft.is_initialized().await.unwrap();
+        let is_initialized = mm.raft.is_initialized().await.unwrap();
         if is_initialized {
             let change_members = ChangeMembers::AddVoters(map);
-            mm
-                .raft
+            mm.raft
                 .change_membership(change_members, false)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
@@ -58,8 +56,7 @@ impl FlareControl for FlareControlService {
                     addr: self.flare_node.addr.clone(),
                 },
             );
-            mm
-                .raft
+            mm.raft
                 .initialize(map)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
@@ -98,7 +95,7 @@ impl FlareControl for FlareControlService {
 
     async fn get_topology(
         &self,
-        request: Request<ClusterTopologyRequest>,
+        _request: Request<ClusterTopologyRequest>,
     ) -> Result<Response<ClusterTopologyInfo>, Status> {
         todo!()
     }

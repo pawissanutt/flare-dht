@@ -50,7 +50,7 @@ pub struct FlareMetadataManager {
 fn resolve_shard_id(meta: &CollectionMetadata, key: &str) -> Option<u64> {
     let hashed = mur3::murmurhash3_x86_32(key.as_bytes(), meta.seed) as u32;
     let shard_count = meta.shard_ids.len();
-    let size = u32::div_ceil(u32::MAX , shard_count as u32);
+    let size = u32::div_ceil(u32::MAX, shard_count as u32);
     let shard_index = hashed / size;
     Some(meta.shard_ids[shard_index as usize])
 }
@@ -132,11 +132,12 @@ impl FlareMetadataManager {
         }
     }
 
-    
-
     #[inline]
     pub async fn get_leader_id(&self) -> Result<u64, FlareInternalError> {
-       self.raft.current_leader().await.ok_or(FlareInternalError::NoLeader)
+        self.raft
+            .current_leader()
+            .await
+            .ok_or(FlareInternalError::NoLeader)
     }
 
     pub async fn create_control_client(
@@ -152,14 +153,9 @@ impl FlareMetadataManager {
         })
     }
 
-    
-
-    pub async fn get_node_addr(
-        &self, 
-        node_id: NodeId
-    ) -> Option<String> {
+    pub async fn get_node_addr(&self, node_id: NodeId) -> Option<String> {
         let sm = self.state_machine.state_machine.read().await;
-        if let Some(node) = sm.last_membership.membership().get_node(&node_id){
+        if let Some(node) = sm.last_membership.membership().get_node(&node_id) {
             Some(node.addr.clone())
         } else {
             None

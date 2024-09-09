@@ -7,14 +7,17 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
 pub struct FlareMetaRaftService {
-    flare_node: Arc<FlareNode>,
+    // flare_node: Arc<FlareNode>,
     mm: Arc<FlareMetadataManager>,
 }
 
 impl FlareMetaRaftService {
     pub fn new(node: Arc<FlareNode>) -> Self {
-        let node_clone = node.clone();
-        FlareMetaRaftService { flare_node: node_clone, mm: node.metadata_manager.clone()}
+        // let node_clone = node.clone();
+        FlareMetaRaftService {
+            // flare_node: node_clone,
+            mm: node.metadata_manager.clone(),
+        }
     }
 }
 
@@ -26,7 +29,8 @@ impl FlareMetadataRaft for FlareMetaRaftService {
     ) -> Result<Response<ByteWrapper>, Status> {
         let wrapper = request.into_inner();
         let req = server_decode(&wrapper.data)?;
-        let result = self.mm
+        let result = self
+            .mm
             .raft
             .vote(req)
             .await
@@ -40,7 +44,8 @@ impl FlareMetadataRaft for FlareMetaRaftService {
     ) -> Result<Response<ByteWrapper>, Status> {
         let wrapper = request.into_inner();
         let req = server_decode(&wrapper.data)?;
-        let result = self.mm
+        let result = self
+            .mm
             .raft
             .install_snapshot(req)
             .await
@@ -54,7 +59,8 @@ impl FlareMetadataRaft for FlareMetaRaftService {
     ) -> Result<Response<ByteWrapper>, Status> {
         let wrapper = request.into_inner();
         let req = server_decode(&wrapper.data)?;
-        let result = self.mm
+        let result = self
+            .mm
             .raft
             .append_entries(req)
             .await

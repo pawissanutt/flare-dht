@@ -128,9 +128,9 @@ impl FlareNode {
         Ok(())
     }
 
-    async fn shutdown(&self) {
-        self.metadata_manager.raft.shutdown().await.unwrap();
-    }
+    // async fn shutdown(&self) {
+    //     self.metadata_manager.raft.shutdown().await.unwrap();
+    // }
 
     pub async fn leave(&self) {
         let mm = self.metadata_manager.clone();
@@ -141,7 +141,7 @@ impl FlareNode {
             let node_count = sm.last_membership.nodes().count();
             drop(sm);
             if node_count == 1 {
-                self.shutdown().await;
+                // self.shutdown().await;
                 return;
             } else {
                 let change_members: ChangeMembers<u64, openraft::BasicNode> =

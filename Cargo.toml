@@ -4,3 +4,20 @@ members = [
     "flare-dht", 
     "flare-pb"
     ]
+
+
+[workspace.package]
+authors = ["Pawissanutt Lertpongrujikorn <pawissanutt@gmail.com>"]
+version = "0.1.3"
+edition = "2021"
+repository = "https://github.com/pawissanutt/flare-dht"
+license = "Apache-2.0"
+rust-version = "1.81"
+
+
+[workspace.dependencies]
+flare-dht = {version = "0.1.3", path = "flare-dht"}
+flare-pb = {version = "0.1.3", path = "flare-pb"}
+prost = "0.13"
+prost-types = "0.13"
+tonic = "0.12"

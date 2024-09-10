@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 #[derive(
     rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Debug, Default, Clone,
 )]
-#[rkyv(compare(PartialEq), check_bytes, derive(Debug))]
+#[rkyv(compare(PartialEq), derive(Debug))]
 pub struct FlareMetadataSM {
     pub collections: BTreeMap<String, CollectionMetadata>,
     pub shards: BTreeMap<u64, ShardMetadata>,
@@ -86,7 +86,7 @@ pub enum FlareControlResponse {
     Default,
     Clone,
 )]
-#[rkyv(compare(PartialEq), check_bytes, derive(Debug))]
+#[rkyv(compare(PartialEq), derive(Debug))]
 pub struct CollectionMetadata {
     pub name: String,
     pub shard_ids: Vec<u64>,

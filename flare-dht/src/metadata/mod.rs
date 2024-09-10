@@ -58,12 +58,9 @@ fn resolve_shard_id(meta: &CollectionMetadata, key: &str) -> Option<u64> {
 impl FlareMetadataManager {
     pub async fn new(node_id: u64) -> Self {
         let config = Config {
-            heartbeat_interval: 500,
-            election_timeout_min: 1500,
-            election_timeout_max: 3000,
             ..Default::default()
         };
-        info!("use config {:?}", config);
+        info!("use raft {:?}", config);
         let config = Arc::new(config.validate().unwrap());
         let log_store = MemLogStore::default();
         let sm: StateMachineStore<FlareMetadataSM> =

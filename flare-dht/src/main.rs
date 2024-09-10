@@ -14,7 +14,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let cli = FlareCli::parse();
 
     if let FlareCommands::Server(args) = cli.command {
-        info!("use option {args:?}");
         let flare_node = flare_dht::start_server(args).await?;
 
         match signal::ctrl_c().await {
@@ -26,6 +25,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         info!("starting a clean up for shutdown");
         flare_node.leave().await;
+        info!("done clean up");
     }
 
     Ok(())

@@ -11,7 +11,7 @@ pub use hashmap::HashMapShardFactory;
 #[derive(
     rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Debug, Default, Clone,
 )]
-#[rkyv(compare(PartialEq), check_bytes, derive(Debug))]
+#[rkyv(compare(PartialEq), derive(Debug))]
 pub struct ShardMetadata {
     pub id: u64,
     pub collection: String,

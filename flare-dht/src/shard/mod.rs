@@ -5,6 +5,7 @@ pub type ShardId = u64;
 mod hashmap;
 // mod remote;
 
+use bytes::Bytes;
 pub use hashmap::HashMapShard;
 pub use hashmap::HashMapShardFactory;
 
@@ -34,12 +35,19 @@ pub trait KvShard: Send + Sync {
 #[derive(Debug, Default, Clone)]
 pub struct ShardEntry {
     pub rc: u16,
-    pub value: Vec<u8>,
+    pub value: Bytes,
 }
 
 impl From<Vec<u8>> for ShardEntry {
     #[inline]
     fn from(v: Vec<u8>) -> Self {
+        ShardEntry { rc: 1, value: Bytes::from(v) }
+    }
+}
+
+impl From<Bytes> for ShardEntry {
+    #[inline]
+    fn from(v: Bytes) -> Self {
         ShardEntry { rc: 1, value: v }
     }
 }

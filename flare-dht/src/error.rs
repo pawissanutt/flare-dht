@@ -28,6 +28,8 @@ pub enum FlareError {
     RpcError(#[from] Status),
     #[error("{0}")]
     InternalError(#[from] FlareInternalError),
+    #[error("{0}")]
+    ConnectionPoolError(#[from] mobc::Error<FlareInternalError>),
 }
 
 impl From<FlareError> for tonic::Status {

@@ -9,7 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .file_descriptor_set_path(out_dir.join("flare_descriptor.bin"))
         .type_attribute(".", "#[derive(serde::Serialize,serde::Deserialize)]")
         .protoc_arg("--experimental_allow_proto3_optional")
-        .bytes(&[".flare.SetRequest", ".flare.ValueResponse"])
+        // .bytes(&[".flare.SetRequest", ".flare.ValueResponse"])
         .compile(
             &[
                 "proto/flare-common.proto",

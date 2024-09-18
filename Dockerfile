@@ -1,10 +1,11 @@
+ARG APP_NAME="flare-dht"
+
 FROM lukemathwalker/cargo-chef:latest as chef
 WORKDIR /app
 
 FROM chef AS planner
-COPY ./Cargo.toml ./Cargo.lock ./
-COPY ./proto ./proto
-COPY ./src ./src
+# COPY ./Cargo.toml ./Cargo.lock ./
+COPY . .
 RUN cargo chef prepare
 
 FROM chef AS builder
@@ -13,7 +14,7 @@ COPY --from=planner /app/recipe.json .
 RUN cargo chef cook --release
 COPY . .
 RUN cargo build --release
-RUN mv ./target/release/flare-dht ./app
+RUN mv ./target/release/${APP_NAME} ./app
 
 FROM debian:stable-slim AS runtime
 WORKDIR /app

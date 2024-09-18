@@ -16,6 +16,7 @@ use flare_pb::{
     LeaveRequest,
 };
 
+use openraft::docs::data::leader_id;
 use openraft::ChangeMembers;
 use std::collections::BTreeMap;
 use std::error::Error;
@@ -23,6 +24,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio_stream::StreamExt;
+use tonic::client;
 use tonic::transport::{Channel, Uri};
 use tracing::info;
 
@@ -33,7 +35,8 @@ pub struct FlareNode {
     pub addr: String,
     pub node_id: NodeId,
     pub shard_factory: Arc<dyn ShardFactory>,
-    pub client_pool: ClientPool,
+    pub client_pool: Arc<ClientPool>,
+    // pub conn_manager: ConnManager,
     close_signal_sender: tokio::sync::watch::Sender<bool>,
     close_signal_receiver: tokio::sync::watch::Receiver<bool>,
 }
@@ -46,7 +49,7 @@ impl FlareNode {
         info!("use node_id: {node_id}");
         let addr = options.get_addr();
         let mm = Arc::new(FlareMetadataManager::new(node_id).await);
-        let pool = ClientPool::new(mm.clone());
+        let pool = Arc::new(ClientPool::new(mm.clone()));
         let (tx, rx) = tokio::sync::watch::channel(false);
         FlareNode {
             shards: Arc::new(shards),
@@ -64,25 +67,9 @@ impl FlareNode {
         let mut rs = tokio_stream::wrappers::WatchStream::new(
             self.metadata_manager.raft.data_metrics(),
         );
-        // let close_rs = tokio_stream::wrappers::WatchStream::new(
-        //     self.close_signal_receiver.clone(),
-        // );
         tokio::spawn(async move {
             let mut last_sync = 0;
             loop {
-                // tokio::select! {
-                //     Some(d) = rs.next() => {
-                //         info!("event!!!");
-                //         if let Some(la) = d.last_applied {
-                //             if la.index > last_sync {
-                //                 last_sync = la.index;
-                //                 self.sync_shard().await;
-                //             }
-                //         }
-                //     },
-                //     // Some(_) = close_rs.next() => break,
-                //     else => break,
-                // }
                 if let Some(d) = rs.next().await {
                     if let Some(la) = d.last_applied {
                         if la.index > last_sync {
@@ -236,8 +223,8 @@ impl FlareNode {
             ));
         }
         if !self.metadata_manager.is_leader().await {
-            let leader_channel = self.client_pool.get_leader().await?;
-            let mut client = FlareKvClient::new(leader_channel);
+            let leader_id = self.metadata_manager.get_leader_id().await?;
+            let mut client = self.client_pool.kv_pool.get(leader_id).await?;
             let resp = client.create_collection(request).await?;
             return Ok(resp.into_inner());
         }

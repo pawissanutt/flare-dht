@@ -1,4 +1,3 @@
-use bytes::Bytes;
 use flare_pb::flare_kv_client::FlareKvClient;
 use flare_pb::SetRequest;
 use rand::Rng;
@@ -35,7 +34,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .take(size)
                 .map(u8::from)
                 .collect();
-            let value = Bytes::from(value);
+            // let value = Bytes::from(value);
             for j in 0..count {
                 let id = tsid::create_tsid_256().to_string();
                 let request = tonic::Request::new(SetRequest {
@@ -44,8 +43,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     collection: "default".into(),
                 });
                 let response = client.set(request).await;
-                if let Err(_) = response {
-                    print!("error on setting key {id}");
+                if let Err(e) = response {
+                    print!("error on setting key {}: {:?}", id, e);
                 }
 
                 if (j + 1) % 1000 == 0 {

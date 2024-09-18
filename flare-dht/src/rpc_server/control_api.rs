@@ -1,10 +1,12 @@
 use crate::cluster::FlareNode;
+use crate::error::FlareError;
 use flare_pb::flare_control_server::FlareControl;
 use flare_pb::{
     ClusterMetadata, ClusterMetadataRequest, ClusterTopologyInfo,
     ClusterTopologyRequest, CollectionMetadata, JoinRequest, JoinResponse,
     LeaveRequest, LeaveResponse, ShardMetadata,
 };
+use openraft::docs::data::leader_id;
 use openraft::{BasicNode, ChangeMembers};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
@@ -31,8 +33,14 @@ impl FlareControl for FlareControlService {
         info!("receive join request {}", &join_request.addr);
         let mm = self.flare_node.metadata_manager.clone();
         if !mm.is_leader().await {
-            let mut cc =
-                self.flare_node.client_pool.get_control_client().await?;
+            let leader_id = mm.get_leader_id().await?;
+            let mut cc = self
+                .flare_node
+                .client_pool
+                .control_pool
+                .get(leader_id)
+                .await
+                .map_err(|e| FlareError::from(e))?;
             return cc.join(join_request).await;
         }
 
@@ -107,7 +115,13 @@ impl FlareControl for FlareControlService {
         let flare = self.flare_node.clone();
         let mm = flare.metadata_manager.clone();
         if !mm.is_leader().await {
-            let mut cc = flare.client_pool.get_control_client().await?;
+            let leader_id = mm.get_leader_id().await?;
+            let mut cc = flare
+                .client_pool
+                .control_pool
+                .get(leader_id)
+                .await
+                .map_err(FlareError::from)?;
             return cc.get_metadata(req.into_inner()).await;
         }
 

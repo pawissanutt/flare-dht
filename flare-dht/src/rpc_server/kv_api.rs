@@ -31,10 +31,10 @@ impl FlareKv for FlareKvService {
             .flare_node
             .get_shard(&key_request.collection, &key_request.key)
             .await?;
-        if let Some(val) = shard.get(&key_request.key).await {
+        if let Some(entry) = shard.get(&key_request.key).await {
             Ok(Response::new(ValueResponse {
                 key: key_request.key,
-                value: val.value,
+                value: entry.value,
             }))
         } else {
             Err(Status::not_found("not found data"))

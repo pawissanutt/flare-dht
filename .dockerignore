@@ -1,0 +1,7 @@
+# *
+target/*
+*.md
+*.adoc
+# !Cargo.*
+# !**/Cargo.*
+# !**/*.rs

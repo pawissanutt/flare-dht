@@ -36,6 +36,8 @@ async-trait = "0.1"
 tokio-stream = { version = "0.1", features = ["sync"] }
 http = "1.1"
 bytes={version = "1.7", features = []}
+hashbrown = "0.14.5"
+mobc = "0.8.4"
 
 [dev-dependencies]
 criterion = { version = "0.5.1", features = ["async_futures", "async_tokio", "html_reports", "tokio"] }

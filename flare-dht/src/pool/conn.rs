@@ -1,4 +1,4 @@
-use std::{fmt::Debug, hash::Hash, sync::Arc};
+use std::{hash::Hash, sync::Arc};
 
 use hashbrown::HashMap;
 use mobc::{Connection, Manager, Pool};

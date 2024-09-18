@@ -6,7 +6,6 @@ use flare_pb::{
     ClusterTopologyRequest, CollectionMetadata, JoinRequest, JoinResponse,
     LeaveRequest, LeaveResponse, ShardMetadata,
 };
-use openraft::docs::data::leader_id;
 use openraft::{BasicNode, ChangeMembers};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;

@@ -10,13 +10,11 @@ use crate::shard::{KvShard, ShardFactory, ShardId};
 use crate::ServerArgs;
 use dashmap::DashMap;
 use flare_pb::flare_control_client::FlareControlClient;
-use flare_pb::flare_kv_client::FlareKvClient;
 use flare_pb::{
     CreateCollectionRequest, CreateCollectionResponse, JoinRequest,
     LeaveRequest,
 };
 
-use openraft::docs::data::leader_id;
 use openraft::ChangeMembers;
 use std::collections::BTreeMap;
 use std::error::Error;
@@ -24,7 +22,6 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio_stream::StreamExt;
-use tonic::client;
 use tonic::transport::{Channel, Uri};
 use tracing::info;
 

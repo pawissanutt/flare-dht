@@ -34,7 +34,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 fn init_log() {
     let subscriber = FmtSubscriber::builder()
         .with_env_filter(EnvFilter::from_default_env())
-        .with_thread_ids(true) // Enable thread ID logging
+        // .with_thread_ids(true) // Enable thread ID logging
         .finish();
     subscriber
         .try_init()

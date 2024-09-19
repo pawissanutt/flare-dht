@@ -1,5 +1,3 @@
-ARG APP_NAME="flare-dht"
-
 FROM lukemathwalker/cargo-chef:latest as chef
 WORKDIR /app
 
@@ -14,10 +12,10 @@ COPY --from=planner /app/recipe.json .
 RUN cargo chef cook --release
 COPY . .
 RUN cargo build --release
-RUN mv ./target/release/${APP_NAME} ./app
 
 FROM debian:stable-slim AS runtime
+ARG APP_NAME="flare-dht"
 WORKDIR /app
-COPY --from=builder /app/app /usr/local/bin/
+COPY --from=builder /app/target/release/${APP_NAME} /usr/local/bin/app
 ENTRYPOINT ["/usr/local/bin/app"]
-CMD [ "server", "-p", "80"]
+CMD [ "server", "-p", "80"]v

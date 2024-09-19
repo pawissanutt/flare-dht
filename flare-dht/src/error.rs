@@ -12,6 +12,8 @@ pub enum FlareInternalError {
     NoSuchNode(NodeId),
     #[error("No leader")]
     NoLeader,
+    #[error("{0}")]
+    ConnectionError(#[from] tonic::transport::Error),
 }
 
 #[derive(thiserror::Error, Debug)]

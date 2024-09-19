@@ -13,8 +13,6 @@ license.workspace = true
 [dependencies]
 dashmap = "6.1"
 mur3 = "0.1"
-prost = {workspace=true}
-prost-types = {workspace=true}
 tonic = {workspace=true}
 tonic-reflection = { version = "0.12", features = ["server"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "net"] }
@@ -24,12 +22,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 clap = "4.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-rkyv = { version = "0.8.1", features = ["alloc"] }
+rkyv = { version = "0.8", features = ["alloc"] }
 bincode = { version = "2.0.0-rc.3", features = ["serde"] }
 thiserror = "1.0"
 rancor = "0.1.0"
 rand = "0.8"
-futures = "0.3"
 tsid = "0.3"
 flare-pb = {workspace=true}
 async-trait = "0.1"

@@ -40,6 +40,8 @@ scc = { version = "2.1.17", features = [] }
 
 [dev-dependencies]
 criterion = { version = "0.5.1", features = ["async_futures", "async_tokio", "html_reports", "tokio"] }
+rlt = {version = "0.2.0"}
+anyhow = "1.0.89"
 
 [[bench]]
 name = "write_benchmark"

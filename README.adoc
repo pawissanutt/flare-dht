@@ -20,7 +20,8 @@ cargo run -- -p 8003 -n 2 --peer-addr http://127.0.0.1:8001
 * [*] Raft protocol
 * [*] join mechanism
 * [*] leave mechanism
-* [ ] distributed shards
+* [*] distributed shards
+* [ ] customizable shard interface
 * [ ] member discovery
 * [ ] shard rebalancing
 * [ ] more APIs

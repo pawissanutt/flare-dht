@@ -22,14 +22,27 @@ pub struct ShardMetadata {
 
 #[async_trait::async_trait]
 pub trait KvShard: Send + Sync {
+    type Entry: BaseEntry;
+
     fn meta(&self) -> &ShardMetadata;
-    async fn get(&self, key: &String) -> Option<ShardEntry>;
+
+    async fn get(
+        &self,
+        key: &String,
+    ) -> Result<Option<Self::Entry>, FlareError>;
+
     async fn set(
         &self,
         key: String,
-        value: ShardEntry,
+        value: Self::Entry,
     ) -> Result<(), FlareError>;
+
     async fn delete(&self, key: &String) -> Result<(), FlareError>;
+}
+
+pub trait BaseEntry: Send + Sync {
+    fn to_vec(&self) -> Vec<u8>;
+    fn from_vec(v: Vec<u8>) -> Self;
 }
 
 #[derive(Debug, Default, Clone)]
@@ -37,6 +50,16 @@ pub struct ShardEntry {
     pub rc: u16,
     pub value: Vec<u8>,
     // pub value: Bytes,
+}
+
+impl BaseEntry for ShardEntry {
+    fn to_vec(&self) -> Vec<u8> {
+        self.value.clone()
+    }
+
+    fn from_vec(v: Vec<u8>) -> Self {
+        ShardEntry { rc: 0, value: v }
+    }
 }
 
 impl From<Vec<u8>> for ShardEntry {
@@ -76,6 +99,9 @@ impl From<&Bytes> for ShardEntry {
     }
 }
 
-pub trait ShardFactory: Send + Sync {
-    fn create_shard(&self, shard_metadata: ShardMetadata) -> Arc<dyn KvShard>;
+pub trait ShardFactory<T>: Send + Sync
+where
+    T: KvShard,
+{
+    fn create_shard(&self, shard_metadata: ShardMetadata) -> Arc<T>;
 }

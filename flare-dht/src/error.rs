@@ -32,6 +32,8 @@ pub enum FlareError {
     InternalError(#[from] FlareInternalError),
     #[error("{0}")]
     ConnectionPoolError(#[from] mobc::Error<FlareInternalError>),
+    #[error("Infallible")]
+    Infallible,
 }
 
 impl From<FlareError> for tonic::Status {

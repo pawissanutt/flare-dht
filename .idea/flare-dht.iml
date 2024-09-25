@@ -8,6 +8,7 @@
       <sourceFolder url="file://$MODULE_DIR$/flare-dht/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/flare-dht/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/flare-pb/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/flare-dht/benches" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

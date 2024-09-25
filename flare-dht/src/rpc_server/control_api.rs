@@ -1,5 +1,6 @@
-use crate::cluster::FlareNode;
 use crate::error::FlareError;
+use crate::metadata::FlareMetadataManager;
+use crate::pool::ClientPool;
 use flare_pb::flare_control_server::FlareControl;
 use flare_pb::{
     ClusterMetadata, ClusterMetadataRequest, ClusterTopologyInfo,
@@ -13,13 +14,9 @@ use tonic::{Request, Response, Status};
 use tracing::info;
 
 pub struct FlareControlService {
-    flare_node: Arc<FlareNode>,
-}
-
-impl FlareControlService {
-    pub fn new(flare_node: Arc<FlareNode>) -> Self {
-        FlareControlService { flare_node }
-    }
+    pub(crate) addr: String,
+    pub(crate) metadata_manager: Arc<FlareMetadataManager>,
+    pub(crate) client_pool: Arc<ClientPool>,
 }
 
 #[tonic::async_trait]
@@ -30,11 +27,10 @@ impl FlareControl for FlareControlService {
     ) -> Result<Response<JoinResponse>, Status> {
         let join_request = request.into_inner();
         info!("receive join request {}", &join_request.addr);
-        let mm = self.flare_node.metadata_manager.clone();
+        let mm = self.metadata_manager.clone();
         if !mm.is_leader().await {
             let leader_id = mm.get_leader_id().await?;
             let mut cc = self
-                .flare_node
                 .client_pool
                 .control_pool
                 .get(leader_id)
@@ -60,7 +56,7 @@ impl FlareControl for FlareControlService {
             map.insert(
                 mm.node_id,
                 BasicNode {
-                    addr: self.flare_node.addr.clone(),
+                    addr: self.addr.clone(),
                 },
             );
             mm.raft
@@ -77,9 +73,8 @@ impl FlareControl for FlareControlService {
         request: Request<LeaveRequest>,
     ) -> Result<Response<LeaveResponse>, Status> {
         let leave_req = request.into_inner();
-        let flare_node = self.flare_node.clone();
         info!("receive join request {}", &leave_req.node_id);
-        let metadata_manager = flare_node.metadata_manager.clone();
+        let metadata_manager = self.metadata_manager.clone();
         let mut nodes = BTreeSet::new();
         nodes.insert(leave_req.node_id);
         if metadata_manager.is_voter(leave_req.node_id).await {
@@ -111,11 +106,10 @@ impl FlareControl for FlareControlService {
         &self,
         req: Request<ClusterMetadataRequest>,
     ) -> Result<Response<ClusterMetadata>, Status> {
-        let flare = self.flare_node.clone();
-        let mm = flare.metadata_manager.clone();
+        let mm = self.metadata_manager.clone();
         if !mm.is_leader().await {
             let leader_id = mm.get_leader_id().await?;
-            let mut cc = flare
+            let mut cc = self
                 .client_pool
                 .control_pool
                 .get(leader_id)

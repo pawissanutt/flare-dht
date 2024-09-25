@@ -1,10 +1,13 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use flare_dht::{shard::ShardEntry, start_server, FlareNode, ServerArgs};
+use flare_dht::{
+    shard::{HashMapShard, KvShard, ShardEntry},
+    start_server, FlareNode, ServerArgs,
+};
 use flare_pb::CreateCollectionRequest;
 use rand::Rng;
 use std::{sync::Arc, time::Duration};
 
-async fn run(flare: Arc<FlareNode>, size: usize) {
+async fn run(flare: Arc<FlareNode<HashMapShard>>, size: usize) {
     let key: String = rand::thread_rng()
         .sample_iter(&rand::distributions::Alphanumeric)
         .take(8)

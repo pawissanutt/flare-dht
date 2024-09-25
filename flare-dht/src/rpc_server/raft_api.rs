@@ -1,4 +1,3 @@
-use crate::cluster::FlareNode;
 use crate::metadata::FlareMetadataManager;
 use crate::util::{server_decode, server_encode};
 use flare_pb::flare_metadata_raft_server::FlareMetadataRaft;
@@ -7,17 +6,12 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
 pub struct FlareMetaRaftService {
-    // flare_node: Arc<FlareNode>,
     mm: Arc<FlareMetadataManager>,
 }
 
 impl FlareMetaRaftService {
-    pub fn new(node: Arc<FlareNode>) -> Self {
-        // let node_clone = node.clone();
-        FlareMetaRaftService {
-            // flare_node: node_clone,
-            mm: node.metadata_manager.clone(),
-        }
+    pub fn new(mm: Arc<FlareMetadataManager>) -> Self {
+        FlareMetaRaftService { mm }
     }
 }
 

@@ -5,10 +5,7 @@ use crate::metadata::state_machine::{
 use crate::metadata::FlareMetadataManager;
 use crate::pool::ClientPool;
 use crate::raft::NodeId;
-use crate::shard::HashMapShardFactory;
 use crate::shard::{KvShard, ShardFactory, ShardId};
-use crate::ServerArgs;
-use dashmap::DashMap;
 use flare_pb::flare_control_client::FlareControlClient;
 use flare_pb::{
     CreateCollectionRequest, CreateCollectionResponse, JoinRequest,
@@ -16,6 +13,7 @@ use flare_pb::{
 };
 
 use openraft::ChangeMembers;
+use scc::HashMap;
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::str::FromStr;
@@ -25,36 +23,40 @@ use tokio_stream::StreamExt;
 use tonic::transport::{Channel, Uri};
 use tracing::info;
 
-#[derive(Clone)]
-pub struct FlareNode {
+pub struct FlareNode<T>
+where
+    T: KvShard,
+{
     pub metadata_manager: Arc<FlareMetadataManager>,
-    pub shards: Arc<DashMap<ShardId, Arc<dyn KvShard>>>,
+    pub shards: HashMap<ShardId, Arc<T>>,
     pub addr: String,
     pub node_id: NodeId,
-    pub shard_factory: Arc<dyn ShardFactory>,
+    pub shard_factory: Box<dyn ShardFactory<T>>,
     pub client_pool: Arc<ClientPool>,
-    // pub conn_manager: ConnManager,
     close_signal_sender: tokio::sync::watch::Sender<bool>,
     close_signal_receiver: tokio::sync::watch::Receiver<bool>,
 }
 
-impl FlareNode {
-    // #[tracing::instrument]
-    pub async fn new(options: ServerArgs) -> Self {
-        let shards = DashMap::new();
-        let node_id = options.get_node_id();
-        info!("use node_id: {node_id}");
-        let addr = options.get_addr();
-        let mm = Arc::new(FlareMetadataManager::new(node_id).await);
-        let pool = Arc::new(ClientPool::new(mm.clone()));
+impl<T> FlareNode<T>
+where
+    T: KvShard + 'static,
+{
+    pub async fn new(
+        addr: String,
+        node_id: NodeId,
+        metadata_manager: Arc<FlareMetadataManager>,
+        shard_factory: Box<dyn ShardFactory<T>>,
+        client_pool: Arc<ClientPool>,
+    ) -> Self {
+        let shards = HashMap::new();
         let (tx, rx) = tokio::sync::watch::channel(false);
         FlareNode {
-            shards: Arc::new(shards),
-            metadata_manager: mm,
+            shards: shards,
+            metadata_manager: metadata_manager,
             addr,
             node_id,
-            shard_factory: Arc::new(HashMapShardFactory {}),
-            client_pool: pool,
+            shard_factory: shard_factory,
+            client_pool,
             close_signal_sender: tx,
             close_signal_receiver: rx,
         }
@@ -68,9 +70,9 @@ impl FlareNode {
             let mut last_sync = 0;
             loop {
                 if let Some(d) = rs.next().await {
-                    if let Some(la) = d.last_applied {
-                        if la.index > last_sync {
-                            last_sync = la.index;
+                    if let Some(log_id) = d.last_applied {
+                        if log_id.index > last_sync {
+                            last_sync = log_id.index;
                             self.sync_shard().await;
                         }
                     }
@@ -186,10 +188,11 @@ impl FlareNode {
             .shards
             .values()
             .filter(|shard| shard.primary.unwrap_or(0) == self.node_id)
-            .filter(|shard| !self.shards.contains_key(&shard.id));
+            .filter(|shard| !self.shards.contains(&shard.id));
         for s in local_shards {
             let shard = self.shard_factory.create_shard(s.clone());
-            self.shards.insert(shard.meta().id, shard);
+            let shard_id = shard.meta().id;
+            self.shards.upsert(shard_id, shard);
         }
     }
 
@@ -197,14 +200,13 @@ impl FlareNode {
         &self,
         collection: &str,
         key: &str,
-    ) -> Result<Arc<dyn KvShard>, FlareError> {
+    ) -> Result<Arc<T>, FlareError> {
         let option = self.metadata_manager.get_shard_id(collection, key).await;
         if let Some(shard_id) = option {
-            if let Some(shard) = self.shards.get(&shard_id) {
-                Ok(shard.clone())
-            } else {
-                Err(FlareError::NoShardFound(shard_id))
-            }
+            self.shards
+                .get(&shard_id)
+                .map(|shard| shard.get().clone())
+                .ok_or_else(|| FlareError::NoShardFound(shard_id))
         } else {
             Err(FlareError::NoCollection(collection.into()))
         }

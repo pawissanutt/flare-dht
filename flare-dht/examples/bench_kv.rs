@@ -7,16 +7,19 @@ use rlt::{
 use tokio::time::Instant;
 use tonic::transport::{Channel, Uri};
 
-use flare_pb::flare_kv_client::FlareKvClient;
 use flare_pb::SetRequest;
+use flare_pb::{flare_kv_client::FlareKvClient, SingleKeyRequest};
 use rand::Rng;
 
 #[derive(Parser, Clone)]
 pub struct Opts {
     /// Target URL.
     pub url: Uri,
-
+    #[arg(default_value_t = 512)]
     pub size: usize,
+
+    #[arg(short, long, default_value_t = 0)]
+    pub get_count: u64,
 
     /// Embed BenchCli into this Opts.
     #[command(flatten)]
@@ -27,16 +30,21 @@ pub struct Opts {
 struct HttpBench {
     url: Uri,
     value: Vec<u8>,
+    get_count: u64,
 }
 
 impl HttpBench {
-    fn new(url: Uri, size: usize) -> Self {
+    fn new(url: Uri, size: usize, get_count: u64) -> Self {
         let value: Vec<u8> = rand::thread_rng()
             .sample_iter(&rand::distributions::Alphanumeric)
             .take(size)
             .map(u8::from)
             .collect();
-        Self { url, value }
+        Self {
+            url,
+            value,
+            get_count,
+        }
     }
 }
 
@@ -62,39 +70,55 @@ impl BenchSuite for HttpBench {
             collection: "default".into(),
         });
         let resp = client.set(request).await;
-        let duration = t.elapsed();
+        let mut bytes: u64 = 0;
+        let mut status = rlt::Status::success(200);
         match resp {
             Result::Ok(_) => {
-                let bytes = self.value.len();
-                let status = rlt::Status::success(200);
-                return Ok(IterReport {
-                    duration,
-                    status,
-                    bytes: bytes as u64,
-                    items: 1,
-                });
+                bytes = self.value.len() as u64;
             }
             Err(s) => {
+                let duration = t.elapsed();
                 return Ok(IterReport {
                     duration,
                     status: rlt::Status::error(s.code() as i64),
-                    bytes: 0,
+                    bytes: bytes,
                     items: 1,
                 });
             }
         }
-        // return Ok(IterReport {
-        //     duration,
-        //     status: rlt::Status::success(200),
-        //     bytes: 1,
-        //     items: 1,
-        // });
+
+        for i in 0..self.get_count {
+            let request = tonic::Request::new(SingleKeyRequest {
+                key: id.clone(),
+                collection: "default".into(),
+            });
+            let resp = client.get(request).await;
+            if let Err(s) = resp {
+                status = rlt::Status::success(s.code() as i64);
+                let duration = t.elapsed();
+                return Ok(IterReport {
+                    duration,
+                    status: status,
+                    bytes: bytes,
+                    items: 2 + i as u64,
+                });
+            }
+            bytes += resp.unwrap().into_inner().value.len() as u64;
+        }
+
+        let duration = t.elapsed();
+        return Ok(IterReport {
+            duration,
+            status: status,
+            bytes: bytes as u64,
+            items: 1 + self.get_count,
+        });
     }
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let opts: Opts = Opts::parse();
-    let bench = HttpBench::new(opts.url, opts.size);
+    let bench = HttpBench::new(opts.url, opts.size, opts.get_count);
     rlt::cli::run(opts.bench_opts, bench).await
 }

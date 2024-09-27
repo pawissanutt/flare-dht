@@ -10,7 +10,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .type_attribute(".", "#[derive(serde::Serialize,serde::Deserialize)]")
         .protoc_arg("--experimental_allow_proto3_optional")
         // .bytes(&[".flare.SetRequest", ".flare.ValueResponse"])
-        .compile(
+        .compile_protos(
             &[
                 "proto/flare-common.proto",
                 "proto/flare-kv.proto",

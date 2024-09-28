@@ -1,3 +1,6 @@
+use cli::{
+    CollectionOperation, FlareCli, FlareCommands, ServerArgs,
+};
 pub use cluster::FlareNode;
 use metadata::FlareMetadataManager;
 use pool::ClientPool;
@@ -9,16 +12,19 @@ use std::{
 };
 
 use flare_pb::{
-    flare_control_server::FlareControlServer, flare_kv_server::FlareKvServer,
+    flare_control_server::FlareControlServer, flare_kv_client::FlareKvClient,
+    flare_kv_server::FlareKvServer,
     flare_metadata_raft_server::FlareMetadataRaftServer,
+    CreateCollectionRequest,
 };
 use rpc_server::{
     control_api::FlareControlService, kv_api::FlareKvService,
     raft_api::FlareMetaRaftService,
 };
-use tonic::transport::Server;
+use tonic::{transport::Server, Request};
 use tracing::info;
 
+pub mod cli;
 #[cfg(feature = "cluster")]
 pub mod cluster;
 mod error;
@@ -29,56 +35,6 @@ mod raft;
 pub mod rpc_server;
 pub mod shard;
 mod util;
-
-#[derive(clap::Parser, Clone, Debug)]
-#[clap(author, version, about, long_about = None)]
-pub struct FlareCli {
-    #[command(subcommand)]
-    pub command: FlareCommands,
-}
-
-#[derive(clap::Subcommand, Clone, Debug)]
-pub enum FlareCommands {
-    /// Start as server
-    Server(ServerArgs),
-    Cli,
-}
-
-#[derive(clap::Args, Debug, Clone, Default)]
-pub struct ServerArgs {
-    /// advertisement address
-    pub addr: Option<String>,
-    /// gRPC port
-    #[arg(short, long, default_value = "8001")]
-    pub port: u16,
-    /// if start as Raft leader
-    #[arg(short, long)]
-    pub leader: bool,
-    #[arg(long, default_value = "false")]
-    pub not_server: bool,
-    /// Address to join the Raft cluster
-    #[arg(long)]
-    pub peer_addr: Option<String>,
-    /// Node ID. Randomized, if none.
-    #[arg(short, long)]
-    pub node_id: Option<u64>,
-}
-
-impl ServerArgs {
-    pub fn get_node_id(&self) -> u64 {
-        if let Some(id) = self.node_id {
-            return id;
-        }
-        rand::random()
-    }
-
-    pub fn get_addr(&self) -> String {
-        if let Some(addr) = &self.addr {
-            return addr.clone();
-        }
-        return format!("http://127.0.0.1:{}", self.port);
-    }
-}
 
 pub async fn start_server(
     options: ServerArgs,
@@ -159,4 +115,52 @@ pub async fn start_server(
     }
 
     Ok(shared_node)
+}
+
+pub async fn handle_cli(command: FlareCli) -> Result<(), Box<dyn Error>> {
+    match command.command {
+        FlareCommands::Server(server_args) => handle_server(server_args).await,
+        FlareCommands::Collection { opt } => handle_collection(opt).await,
+    }
+}
+
+async fn handle_server(server_args: ServerArgs) -> Result<(), Box<dyn Error>> {
+    let flare_node = start_server(server_args).await?;
+
+    match tokio::signal::ctrl_c().await {
+        Ok(()) => {}
+        Err(err) => {
+            eprintln!("Unable to listen for shutdown signal: {}", err);
+            // we also shut down in case of error
+        }
+    }
+    info!("starting a clean up for shutdown");
+    flare_node.leave().await;
+    info!("done clean up");
+    Ok(())
+}
+
+async fn handle_collection(
+    opt: CollectionOperation,
+) -> Result<(), Box<dyn Error>> {
+    info!("collection {:?}", opt);
+    match opt {
+        CollectionOperation::Create {
+            name,
+            shard_count: partitions,
+            connection,
+        } => {
+            let mut client =
+                FlareKvClient::connect(connection.server_url).await?;
+            let resp = client
+                .create_collection(Request::new(CreateCollectionRequest {
+                    shard_count: partitions as i32,
+                    name: name,
+                    ..Default::default()
+                }))
+                .await?;
+            info!("RESP: {:?}\n", resp);
+        }
+    }
+    Ok(())
 }

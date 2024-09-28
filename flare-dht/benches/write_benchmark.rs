@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use flare_dht::{
     shard::{HashMapShard, KvShard, ShardEntry},
-    start_server, FlareNode, ServerArgs,
+    start_server, FlareNode,
 };
 use flare_pb::CreateCollectionRequest;
 use rand::Rng;
@@ -32,7 +32,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     static KB: usize = 1024;
     for size in [512, KB, 2 * KB, 4 * KB, 8 * KB, 16 * KB].iter() {
         let flare_node = runtime.block_on(async {
-            let flare_node = start_server(ServerArgs {
+            let flare_node = start_server(flare_dht::cli::ServerArgs {
                 leader: true,
                 not_server: true,
                 ..Default::default()

@@ -42,7 +42,7 @@ pub struct ServerArgs {
     /// advertisement address
     pub addr: Option<String>,
     /// gRPC port
-    #[arg(short, long, default_value = "8001")]
+    #[arg(short, long, env = "FLARE_PORT", default_value = "8001")]
     pub port: u16,
     /// if start as Raft leader
     #[arg(short, long)]

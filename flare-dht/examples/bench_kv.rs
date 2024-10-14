@@ -13,6 +13,7 @@ use rand::Rng;
 
 #[derive(Parser, Clone)]
 pub struct Opts {
+    #[arg(default_value = "http://127.0.0.1:8001")]
     /// Target URL.
     pub url: Uri,
     #[arg(default_value_t = 512)]

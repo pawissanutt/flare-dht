@@ -1,24 +1,15 @@
 use crate::error::FlareError;
-use crate::metadata::state_machine::{
-    FlareControlRequest, FlareControlResponse,
-};
-use crate::metadata::FlareMetadataManager;
+use crate::metadata::MetadataManager;
 use crate::pool::ClientPool;
 use crate::raft::NodeId;
 use crate::shard::{KvShard, ShardFactory, ShardId};
 use flare_pb::flare_control_client::FlareControlClient;
-use flare_pb::{
-    CreateCollectionRequest, CreateCollectionResponse, JoinRequest,
-    LeaveRequest,
-};
+use flare_pb::JoinRequest;
 
-use openraft::ChangeMembers;
 use scc::HashMap;
-use std::collections::BTreeMap;
 use std::error::Error;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::Duration;
 use tokio_stream::StreamExt;
 use tonic::transport::{Channel, Uri};
 use tracing::info;
@@ -27,7 +18,7 @@ pub struct FlareNode<T>
 where
     T: KvShard,
 {
-    pub metadata_manager: Arc<FlareMetadataManager>,
+    pub metadata_manager: Arc<dyn MetadataManager>,
     pub shards: HashMap<ShardId, Arc<T>>,
     pub addr: String,
     pub node_id: NodeId,
@@ -44,7 +35,7 @@ where
     pub async fn new(
         addr: String,
         node_id: NodeId,
-        metadata_manager: Arc<FlareMetadataManager>,
+        metadata_manager: Arc<dyn MetadataManager>,
         shard_factory: Box<dyn ShardFactory<T>>,
         client_pool: Arc<ClientPool>,
     ) -> Self {
@@ -64,17 +55,15 @@ where
 
     pub fn start_watch_stream(self: Arc<Self>) {
         let mut rs = tokio_stream::wrappers::WatchStream::new(
-            self.metadata_manager.raft.data_metrics(),
+            self.metadata_manager.create_watch(),
         );
         tokio::spawn(async move {
             let mut last_sync = 0;
             loop {
-                if let Some(d) = rs.next().await {
-                    if let Some(log_id) = d.last_applied {
-                        if log_id.index > last_sync {
-                            last_sync = log_id.index;
-                            self.sync_shard().await;
-                        }
+                if let Some(log_id) = rs.next().await {
+                    if log_id > last_sync {
+                        last_sync = log_id;
+                        self.sync_shard().await;
                     }
                     if self.close_signal_receiver.has_changed().unwrap_or(true)
                     {
@@ -84,19 +73,6 @@ where
                 }
             }
         });
-    }
-
-    pub async fn init_leader(&self) -> Result<(), Box<dyn Error>> {
-        let mm = self.metadata_manager.clone();
-        let mut map = BTreeMap::new();
-        map.insert(
-            self.node_id,
-            openraft::BasicNode {
-                addr: self.addr.clone(),
-            },
-        );
-        mm.raft.initialize(map).await?;
-        Ok(())
     }
 
     pub async fn join(&self, peer_addr: &str) -> Result<(), Box<dyn Error>> {
@@ -114,59 +90,8 @@ where
         Ok(())
     }
 
-    // async fn shutdown(&self) {
-    //     self.metadata_manager.raft.shutdown().await.unwrap();
-    // }
-
     pub async fn leave(&self) {
-        let mm = self.metadata_manager.clone();
-        let mut nodes = std::collections::BTreeSet::new();
-        nodes.insert(self.node_id);
-        if mm.is_leader().await {
-            let sm = mm.state_machine.state_machine.read().await;
-            let node_count = sm.last_membership.nodes().count();
-            drop(sm);
-            if node_count == 1 {
-                // self.shutdown().await;
-                return;
-            } else {
-                let change_members: ChangeMembers<u64, openraft::BasicNode> =
-                    ChangeMembers::RemoveVoters(nodes);
-                mm.raft
-                    .change_membership(change_members, true)
-                    .await
-                    .unwrap();
-                tokio::time::sleep(Duration::from_secs(2)).await;
-                match mm.create_control_client().await {
-                    Some(mut client) => {
-                        client
-                            .leave(LeaveRequest {
-                                node_id: self.node_id,
-                            })
-                            .await
-                            .unwrap();
-                    }
-                    None => {}
-                };
-            }
-        } else {
-            let is_voter = mm.is_current_voter().await;
-            let mut client = mm.create_control_client().await.unwrap();
-            client
-                .leave(LeaveRequest {
-                    node_id: self.node_id,
-                })
-                .await
-                .unwrap();
-            if is_voter {
-                client
-                    .leave(LeaveRequest {
-                        node_id: self.node_id,
-                    })
-                    .await
-                    .unwrap();
-            }
-        }
+        self.metadata_manager.leave().await;
         info!("flare leave group");
     }
 
@@ -177,19 +102,11 @@ where
 
     pub async fn sync_shard(&self) {
         tracing::debug!("sync shard");
-        let sm = self
-            .metadata_manager
-            .state_machine
-            .state_machine
-            .read()
-            .await;
-        let local_shards = sm
-            .app_data
-            .shards
-            .values()
-            .filter(|shard| shard.primary.unwrap_or(0) == self.node_id)
-            .filter(|shard| !self.shards.contains(&shard.id));
+        let local_shards = self.metadata_manager.local_shards().await;
         for s in local_shards {
+            if self.shards.contains(&s.id) {
+                continue;
+            }
             let shard = self.shard_factory.create_shard(s.clone());
             let shard_id = shard.meta().id;
             self.shards.upsert(shard_id, shard);
@@ -209,46 +126,6 @@ where
                 .ok_or_else(|| FlareError::NoShardFound(shard_id))
         } else {
             Err(FlareError::NoCollection(collection.into()))
-        }
-    }
-
-    pub async fn create_collection(
-        &self,
-        mut request: CreateCollectionRequest,
-    ) -> Result<CreateCollectionResponse, FlareError> {
-        if request.shard_count == 0 {
-            return Err(FlareError::InvalidArgument(
-                "shard count must be positive".into(),
-            ));
-        }
-        if !self.metadata_manager.is_leader().await {
-            let leader_id = self.metadata_manager.get_leader_id().await?;
-            let mut client = self.client_pool.kv_pool.get(leader_id).await?;
-            let resp = client.create_collection(request).await?;
-            return Ok(resp.into_inner());
-        }
-        if request.shard_assignments.len() != request.shard_count as usize {
-            let node_id = self.node_id;
-            request.shard_assignments =
-                vec![node_id].repeat(request.shard_count as usize);
-        }
-        let req = FlareControlRequest::CreateCollection(request);
-        let resp = self
-            .metadata_manager
-            .raft
-            .client_write(req)
-            .await
-            .map_err(|e| FlareError::UnknownError(Box::new(e)))?;
-        if let FlareControlResponse::CollectionCreated { meta } =
-            resp.response()
-        {
-            Ok(CreateCollectionResponse {
-                name: meta.name.clone(),
-            })
-        } else {
-            Err(FlareError::InvalidArgument(
-                "collection already exist".into(),
-            ))
         }
     }
 }

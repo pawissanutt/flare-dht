@@ -14,6 +14,8 @@ pub enum FlareInternalError {
     NoLeader,
     #[error("{0}")]
     ConnectionError(#[from] tonic::transport::Error),
+    #[error("RaftError: {0}")]
+    RaftError(#[from] Box<dyn Error + Send + Sync + 'static>),
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -24,7 +26,7 @@ pub enum FlareError {
     NoCollection(String),
     #[error("Invalid: {0}")]
     InvalidArgument(String),
-    #[error("Invalid: {0}")]
+    #[error("UnknownError: {0}")]
     UnknownError(#[from] Box<dyn Error + Send + Sync + 'static>),
     #[error("RPC Error: {0}")]
     RpcError(#[from] Status),

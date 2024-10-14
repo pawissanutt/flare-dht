@@ -40,6 +40,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             .await
             .unwrap();
             flare_node
+                .metadata_manager
                 .create_collection(CreateCollectionRequest {
                     name: "benches".into(),
                     shard_count: 16,

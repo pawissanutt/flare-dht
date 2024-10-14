@@ -100,6 +100,7 @@ where
         request: Request<CreateCollectionRequest>,
     ) -> Result<Response<CreateCollectionResponse>, Status> {
         self.flare_node
+            .metadata_manager
             .create_collection(request.into_inner())
             .await
             .map(|r| Response::new(r))

@@ -24,9 +24,9 @@ use tracing::info;
 pub mod cli;
 #[cfg(feature = "cluster")]
 pub mod cluster;
-mod error;
-mod metadata;
-mod pool;
+pub mod error;
+pub mod metadata;
+pub mod pool;
 mod raft;
 #[cfg(feature = "cluster")]
 pub mod rpc_server;

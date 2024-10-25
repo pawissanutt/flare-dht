@@ -1095,9 +1095,9 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "hyper"
-version = "1.4.1"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50dfd22e0e76d0f662d429a5f80fcaf3855009297eab6a0a9f8543834744ba05"
+checksum = "bbbff0a806a4728c99295b254c8838933b5b082d75e3cb70c8dab21fdfbcfa9a"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -1479,9 +1479,9 @@ checksum = "b410bbe7e14ab526a0e86877eb47c6996a2bd7746f027ba551028c925390e4e9"
 
 [[package]]
 name = "openraft"
-version = "0.9.16"
+version = "0.9.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f04a57ce93dda863229cc4ec5598f5c6d7e97cf71464c14e8488f763e0bcbb6"
+checksum = "c99ea08834a7786c6b19a6a40163291d55933889079af2caed24230358d4467a"
 dependencies = [
  "anyerror",
  "byte-unit",
@@ -1502,9 +1502,9 @@ dependencies = [
 
 [[package]]
 name = "openraft-macros"
-version = "0.9.16"
+version = "0.9.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1762f82298d483bc8201671faa584838391cc9a25b8f0c9db0ba04d2e909e939"
+checksum = "226ce477d851088815fdbd05a35921960edeb8767427b2369b424fa57e303ae5"
 dependencies = [
  "chrono",
  "proc-macro2",

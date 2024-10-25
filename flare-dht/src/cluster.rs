@@ -2,11 +2,10 @@ use crate::error::FlareError;
 use crate::metadata::MetadataManager;
 use crate::pool::ClientPool;
 use crate::raft::NodeId;
-use crate::shard::{KvShard, ShardFactory, ShardId};
+use crate::shard::{KvShard, ShardManager};
 use flare_pb::flare_control_client::FlareControlClient;
 use flare_pb::JoinRequest;
 
-use scc::HashMap;
 use std::error::Error;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -19,11 +18,10 @@ where
     T: KvShard,
 {
     pub metadata_manager: Arc<dyn MetadataManager>,
-    pub shards: HashMap<ShardId, Arc<T>>,
     pub addr: String,
     pub node_id: NodeId,
-    pub shard_factory: Box<dyn ShardFactory<T>>,
     pub client_pool: Arc<ClientPool>,
+    pub shard_manager: Arc<ShardManager<T>>,
     close_signal_sender: tokio::sync::watch::Sender<bool>,
     close_signal_receiver: tokio::sync::watch::Receiver<bool>,
 }
@@ -36,17 +34,15 @@ where
         addr: String,
         node_id: NodeId,
         metadata_manager: Arc<dyn MetadataManager>,
-        shard_factory: Box<dyn ShardFactory<T>>,
+        shard_manager: Arc<ShardManager<T>>,
         client_pool: Arc<ClientPool>,
     ) -> Self {
-        let shards = HashMap::new();
         let (tx, rx) = tokio::sync::watch::channel(false);
         FlareNode {
-            shards: shards,
             metadata_manager: metadata_manager,
             addr,
             node_id,
-            shard_factory: shard_factory,
+            shard_manager: shard_manager,
             client_pool,
             close_signal_sender: tx,
             close_signal_receiver: rx,
@@ -63,7 +59,9 @@ where
                 if let Some(log_id) = rs.next().await {
                     if log_id > last_sync {
                         last_sync = log_id;
-                        self.sync_shard().await;
+                        let local_shards =
+                            self.metadata_manager.local_shards().await;
+                        self.shard_manager.sync_shards(&local_shards);
                     }
                     if self.close_signal_receiver.has_changed().unwrap_or(true)
                     {
@@ -100,19 +98,6 @@ where
         self.close_signal_sender.send(true).unwrap();
     }
 
-    pub async fn sync_shard(&self) {
-        tracing::debug!("sync shard");
-        let local_shards = self.metadata_manager.local_shards().await;
-        for s in local_shards {
-            if self.shards.contains(&s.id) {
-                continue;
-            }
-            let shard = self.shard_factory.create_shard(s.clone());
-            let shard_id = shard.meta().id;
-            self.shards.upsert(shard_id, shard);
-        }
-    }
-
     pub async fn get_shard(
         &self,
         collection: &str,
@@ -120,10 +105,7 @@ where
     ) -> Result<Arc<T>, FlareError> {
         let option = self.metadata_manager.get_shard_id(collection, key).await;
         if let Some(shard_id) = option {
-            self.shards
-                .get(&shard_id)
-                .map(|shard| shard.get().clone())
-                .ok_or_else(|| FlareError::NoShardFound(shard_id))
+            self.shard_manager.get_shard(shard_id)
         } else {
             Err(FlareError::NoCollection(collection.into()))
         }

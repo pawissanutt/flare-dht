@@ -26,6 +26,7 @@ use tracing::info;
 
 use flare_pb::flare_control_client::FlareControlClient;
 
+use crate::cli::ServerArgs;
 use crate::error::{FlareError, FlareInternalError};
 use crate::pool::{AddrResolver, ClientPool};
 use crate::raft::log::MemLogStore;
@@ -42,7 +43,6 @@ openraft::declare_raft_types!(
 pub type FlareMetaRaft = openraft::Raft<MetaTypeConfig>;
 
 mod typ {
-
     use crate::raft::NodeId;
     pub type RaftError<E = openraft::error::Infallible> =
         openraft::error::RaftError<NodeId, E>;
@@ -95,7 +95,8 @@ pub struct FlareMetadataManager {
     pub node_id: NodeId,
     pub(crate) raft: FlareMetaRaft,
     pub(crate) state_machine: Arc<StateMachineStore<FlareMetadataSM>>,
-    config: Arc<Config>,
+    raft_config: Arc<Config>,
+    flare_config: ServerArgs,
     log_store: MemLogStore<MetaTypeConfig>,
     node_addr: String,
 }
@@ -109,7 +110,11 @@ fn resolve_shard_id(meta: &CollectionMetadata, key: &str) -> Option<u64> {
 }
 
 impl FlareMetadataManager {
-    pub async fn new(node_id: u64, node_addr: String) -> Self {
+    pub async fn new(
+        node_id: u64,
+        node_addr: String,
+        server_args: ServerArgs,
+    ) -> Self {
         let config = Config {
             ..Default::default()
         };
@@ -138,7 +143,8 @@ impl FlareMetadataManager {
             raft,
             state_machine: sm_arc,
             node_id,
-            config,
+            raft_config: config,
+            flare_config: server_args,
             client_pool,
             log_store,
             node_addr,
@@ -199,17 +205,20 @@ impl FlareMetadataManager {
 #[async_trait::async_trait]
 impl MetadataManager for FlareMetadataManager {
     async fn initialize(&self) -> Result<(), FlareError> {
-        let mut map = BTreeMap::new();
-        map.insert(
-            self.node_id,
-            openraft::BasicNode {
-                addr: self.node_addr.clone(),
-            },
-        );
-        self.raft
-            .initialize(map)
-            .await
-            .map_err(|e| FlareInternalError::RaftError(Box::new(e)))?;
+        if self.flare_config.leader {
+            let mut map = BTreeMap::new();
+            map.insert(
+                self.node_id,
+                openraft::BasicNode {
+                    addr: self.node_addr.clone(),
+                },
+            );
+            self.raft
+                .initialize(map)
+                .await
+                .map_err(|e| FlareInternalError::RaftError(Box::new(e)))?;
+        }
+
         Ok(())
     }
 

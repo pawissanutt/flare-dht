@@ -18,4 +18,4 @@ ARG APP_NAME="flare-dht"
 WORKDIR /app
 COPY --from=builder /app/target/release/${APP_NAME} /usr/local/bin/app
 ENTRYPOINT ["/usr/local/bin/app"]
-CMD [ "server", "-p", "80"]v
+CMD [ "server", "-p", "80"]

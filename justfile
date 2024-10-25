@@ -4,7 +4,6 @@ set export := true
 build: 
     cargo build -r
 
-
 run-leader RUST_LOG="INFO":
      wt -p "leader" -d . pwsh -c "cargo run -- server -p 8001 -n 1 -l"
 

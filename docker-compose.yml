@@ -1,7 +1,7 @@
 services:
   flare:
     build: .
-    image: flare-dht
+    image: harbor.129.114.109.85.nip.io/oaas/flare-dht
     command: ["server", "-l", "-p", "80"]
     ports:
       - 8001:80

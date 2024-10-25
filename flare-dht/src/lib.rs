@@ -1,7 +1,7 @@
 use cli::{CollectionOperation, FlareCli, FlareCommands, ServerArgs};
 pub use cluster::FlareNode;
-use metadata::FlareMetadataManager;
-use shard::{HashMapShard, HashMapShardFactory};
+use metadata::{FlareMetadataManager, MetadataManager};
+use shard::{HashMapShard, HashMapShardFactory, ShardManager};
 use std::{
     error::Error,
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -40,24 +40,26 @@ pub async fn start_server(
 
     let node_id = options.get_node_id();
     info!("use node_id: {node_id}");
-    let metadata_manager: Arc<FlareMetadataManager> =
-        Arc::new(FlareMetadataManager::new(node_id, options.get_addr()).await);
+    let metadata_manager: Arc<FlareMetadataManager> = Arc::new(
+        FlareMetadataManager::new(node_id, options.get_addr(), options.clone())
+            .await,
+    );
+    metadata_manager.initialize().await?;
     let client_pool = metadata_manager.client_pool.clone();
+    let shard_manager =
+        Arc::new(ShardManager::new(Box::new(HashMapShardFactory {})));
     let flare_node = FlareNode::new(
         options.get_addr(),
         node_id,
         metadata_manager.clone(),
-        Box::new(HashMapShardFactory {}),
+        shard_manager,
         client_pool.clone(),
     )
     .await;
-    if options.leader {
-        flare_node.metadata_manager.initialize().await?;
-    }
+
     let shared_node = Arc::new(flare_node);
     let flare_node = shared_node.clone();
     flare_node.start_watch_stream();
-    let flare_node = shared_node.clone();
     let flare_kv = FlareKvService::new(shared_node.clone());
     let flare_meta_raft = FlareMetaRaftService::new(metadata_manager.clone());
     let flare_control = FlareControlService { metadata_manager };
@@ -84,7 +86,6 @@ pub async fn start_server(
                 )
                 .build_v1()
                 .unwrap();
-        drop(flare_node);
 
         if let Some(addr) = options.peer_addr {
             let flare_node = shared_node.clone();

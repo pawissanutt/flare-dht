@@ -5,27 +5,25 @@ use tracing::info;
 
 use crate::error::FlareError;
 
-use super::{KvShard, ShardEntry, ShardFactory, ShardMetadata};
+use super::{ByteEntry, KvShard, ShardFactory, ShardMetadata};
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 pub struct HashMapShard {
     pub shard_metadata: ShardMetadata,
-    pub map: HashMap<String, ShardEntry>,
+    pub map: HashMap<String, ByteEntry>,
 }
 
 #[async_trait::async_trait]
 impl KvShard for HashMapShard {
-    type Entry = ShardEntry;
+    type Key = String;
+    type Entry = ByteEntry;
 
     fn meta(&self) -> &ShardMetadata {
         &self.shard_metadata
     }
 
-    async fn get(
-        &self,
-        key: &String,
-    ) -> Result<Option<ShardEntry>, FlareError> {
+    async fn get(&self, key: &String) -> Result<Option<ByteEntry>, FlareError> {
         let out = self.map.get_async(key).await;
         let out = out.map(|r| r.clone());
         Ok(out)
@@ -34,7 +32,7 @@ impl KvShard for HashMapShard {
     async fn set(
         &self,
         key: String,
-        value: ShardEntry,
+        value: ByteEntry,
     ) -> Result<(), FlareError> {
         self.map.upsert_async(key, value).await;
         Ok(())

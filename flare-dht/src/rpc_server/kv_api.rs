@@ -1,6 +1,6 @@
 use crate::cluster::FlareNode;
-use crate::shard::BaseEntry;
 use crate::shard::KvShard;
+use crate::shard::ShardEntry;
 use flare_pb::flare_kv_server::FlareKv;
 use flare_pb::{
     CreateCollectionRequest, CreateCollectionResponse, EmptyResponse,
@@ -30,7 +30,7 @@ where
 #[tonic::async_trait]
 impl<T> FlareKv for FlareKvService<T>
 where
-    T: KvShard + 'static,
+    T: KvShard<Key = String> + 'static,
 {
     async fn get(
         &self,
@@ -74,7 +74,7 @@ where
             .get_shard(&set_request.collection, &set_request.key)
             .await?;
         shard
-            .set(set_request.key, BaseEntry::from_vec(set_request.value))
+            .set(set_request.key, ShardEntry::from_vec(set_request.value))
             .await?;
         Ok(Response::new(EmptyResponse::default()))
     }

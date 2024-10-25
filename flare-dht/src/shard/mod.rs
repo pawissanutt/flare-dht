@@ -23,77 +23,78 @@ pub struct ShardMetadata {
 
 #[async_trait::async_trait]
 pub trait KvShard: Send + Sync {
-    type Entry: BaseEntry;
+    type Key;
+    type Entry: ShardEntry;
 
     fn meta(&self) -> &ShardMetadata;
 
     async fn get(
         &self,
-        key: &String,
+        key: &Self::Key,
     ) -> Result<Option<Self::Entry>, FlareError>;
 
     async fn set(
         &self,
-        key: String,
+        key: Self::Key,
         value: Self::Entry,
     ) -> Result<(), FlareError>;
 
-    async fn delete(&self, key: &String) -> Result<(), FlareError>;
+    async fn delete(&self, key: &Self::Key) -> Result<(), FlareError>;
 }
 
-pub trait BaseEntry: Send + Sync {
+pub trait ShardEntry: Send + Sync {
     fn to_vec(&self) -> Vec<u8>;
     fn from_vec(v: Vec<u8>) -> Self;
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct ShardEntry {
+pub struct ByteEntry {
     pub rc: u16,
     pub value: Vec<u8>,
     // pub value: Bytes,
 }
 
-impl BaseEntry for ShardEntry {
+impl ShardEntry for ByteEntry {
     fn to_vec(&self) -> Vec<u8> {
         self.value.clone()
     }
 
     fn from_vec(v: Vec<u8>) -> Self {
-        ShardEntry { rc: 0, value: v }
+        ByteEntry { rc: 0, value: v }
     }
 }
 
-impl From<Vec<u8>> for ShardEntry {
+impl From<Vec<u8>> for ByteEntry {
     #[inline]
     fn from(v: Vec<u8>) -> Self {
-        ShardEntry { rc: 1, value: v }
+        ByteEntry { rc: 1, value: v }
     }
 }
 
-impl From<&Vec<u8>> for ShardEntry {
+impl From<&Vec<u8>> for ByteEntry {
     #[inline]
     fn from(v: &Vec<u8>) -> Self {
-        ShardEntry {
+        ByteEntry {
             rc: 1,
             value: v.clone(),
         }
     }
 }
 
-impl From<Bytes> for ShardEntry {
+impl From<Bytes> for ByteEntry {
     #[inline]
     fn from(v: Bytes) -> Self {
-        ShardEntry {
+        ByteEntry {
             rc: 1,
             value: v.to_vec(),
         }
     }
 }
 
-impl From<&Bytes> for ShardEntry {
+impl From<&Bytes> for ByteEntry {
     #[inline]
     fn from(v: &Bytes) -> Self {
-        ShardEntry {
+        ByteEntry {
             rc: 1,
             value: v.to_vec(),
         }

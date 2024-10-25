@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use flare_dht::{
-    shard::{HashMapShard, KvShard, ShardEntry},
+    shard::{ByteEntry, HashMapShard, KvShard},
     start_server, FlareNode,
 };
 use flare_pb::CreateCollectionRequest;
@@ -18,7 +18,7 @@ async fn run(flare: Arc<FlareNode<HashMapShard>>, size: usize) {
         .take(size)
         .map(u8::from)
         .collect();
-    let ve = ShardEntry::from(value);
+    let ve = ByteEntry::from(value);
     let shard = flare.get_shard("benches", &key).await.unwrap();
     shard.set(key, ve).await.unwrap();
 }

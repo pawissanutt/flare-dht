@@ -101,7 +101,7 @@ where
     pub async fn get_shard(
         &self,
         collection: &str,
-        key: &str,
+        key: &[u8],
     ) -> Result<Arc<T>, FlareError> {
         let option = self.metadata_manager.get_shard_id(collection, key).await;
         if let Some(shard_id) = option {

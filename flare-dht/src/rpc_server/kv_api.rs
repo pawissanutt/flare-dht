@@ -30,7 +30,7 @@ where
 #[tonic::async_trait]
 impl<T> FlareKv for FlareKvService<T>
 where
-    T: KvShard<Key = String> + 'static,
+    T: KvShard<Key = String, Entry: ShardEntry> + 'static,
 {
     async fn get(
         &self,
@@ -39,7 +39,7 @@ where
         let key_request = request.into_inner();
         let shard = self
             .flare_node
-            .get_shard(&key_request.collection, &key_request.key)
+            .get_shard(&key_request.collection, key_request.key.as_bytes())
             .await?;
         if let Some(entry) = shard.get(&key_request.key).await? {
             Ok(Response::new(ValueResponse {
@@ -58,7 +58,7 @@ where
         let key_request = request.into_inner();
         let shard = self
             .flare_node
-            .get_shard(&key_request.collection, &key_request.key)
+            .get_shard(&key_request.collection, key_request.key.as_bytes())
             .await?;
         shard.delete(&key_request.key).await?;
         Ok(Response::new(EmptyResponse::default()))
@@ -71,7 +71,7 @@ where
         let set_request = request.into_inner();
         let shard = self
             .flare_node
-            .get_shard(&set_request.collection, &set_request.key)
+            .get_shard(&set_request.collection, set_request.key.as_bytes())
             .await?;
         shard
             .set(set_request.key, ShardEntry::from_vec(set_request.value))

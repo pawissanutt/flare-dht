@@ -3,7 +3,6 @@ pub mod state_machine;
 mod store;
 #[cfg(test)]
 mod test;
-
 use flare_pb::{
     ClusterMetadata, ClusterMetadataRequest, CreateCollectionRequest,
     CreateCollectionResponse, JoinRequest, JoinResponse, LeaveRequest,
@@ -54,7 +53,7 @@ mod typ {
 pub trait MetadataManager: Send + Sync {
     async fn initialize(&self) -> Result<(), FlareError>;
     async fn get_shard_ids(&self, col_name: &str) -> Option<Vec<u64>>;
-    async fn get_shard_id(&self, col_name: &str, key: &str) -> Option<u64>;
+    async fn get_shard_id(&self, col_name: &str, key: &[u8]) -> Option<u64>;
     async fn leave(&self);
     async fn other_leave(&self, node_id: NodeId) -> Result<(), FlareError>;
     async fn other_join(
@@ -101,8 +100,8 @@ pub struct FlareMetadataManager {
     node_addr: String,
 }
 
-fn resolve_shard_id(meta: &CollectionMetadata, key: &str) -> Option<u64> {
-    let hashed = mur3::murmurhash3_x86_32(key.as_bytes(), meta.seed) as u32;
+fn resolve_shard_id(meta: &CollectionMetadata, key: &[u8]) -> Option<u64> {
+    let hashed = mur3::murmurhash3_x86_32(key, meta.seed) as u32;
     let shard_count = meta.shard_ids.len();
     let size = u32::div_ceil(u32::MAX, shard_count as u32);
     let shard_index = hashed / size;
@@ -233,7 +232,7 @@ impl MetadataManager for FlareMetadataManager {
         col
     }
 
-    async fn get_shard_id(&self, col_name: &str, key: &str) -> Option<u64> {
+    async fn get_shard_id(&self, col_name: &str, key: &[u8]) -> Option<u64> {
         let col_meta_state = self.state_machine.state_machine.read().await;
         let col = col_meta_state.app_data.collections.get(col_name);
         if let Some(meta) = col {
@@ -490,7 +489,7 @@ pub fn test_resolve_shard2() -> Result<(), Box<dyn std::error::Error>> {
         seed: rand::random(),
     };
     for i in 0..1000000 {
-        let option = resolve_shard_id(&meta, &format!("test-{}", i));
+        let option = resolve_shard_id(&meta, format!("test-{}", i).as_bytes());
         assert_ne!(option, None);
         assert!(option.unwrap() < shard_count)
     }

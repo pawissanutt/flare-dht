@@ -19,7 +19,7 @@ async fn run(flare: Arc<FlareNode<HashMapShard>>, size: usize) {
         .map(u8::from)
         .collect();
     let ve = ByteEntry::from(value);
-    let shard = flare.get_shard("benches", &key).await.unwrap();
+    let shard = flare.get_shard("benches", key.as_bytes()).await.unwrap();
     shard.set(key, ve).await.unwrap();
 }
 

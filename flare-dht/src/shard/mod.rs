@@ -24,7 +24,7 @@ pub struct ShardMetadata {
 #[async_trait::async_trait]
 pub trait KvShard: Send + Sync {
     type Key;
-    type Entry: ShardEntry;
+    type Entry: Send + Sync;
 
     fn meta(&self) -> &ShardMetadata;
 

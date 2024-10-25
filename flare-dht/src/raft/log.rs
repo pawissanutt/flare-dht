@@ -1,7 +1,6 @@
 use openraft::storage::LogFlushed;
 use openraft::{
-    LogId, LogState, RaftLogId, RaftTypeConfig, StorageError,
-    Vote,
+    LogId, LogState, RaftLogId, RaftTypeConfig, StorageError, Vote,
 };
 use std::collections::BTreeMap;
 use std::fmt::Debug;

@@ -6,12 +6,12 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
 pub struct FlareMetaRaftService {
-    mm: Arc<FlareMetadataManager>,
+    meta_manager: Arc<FlareMetadataManager>,
 }
 
 impl FlareMetaRaftService {
     pub fn new(mm: Arc<FlareMetadataManager>) -> Self {
-        FlareMetaRaftService { mm }
+        FlareMetaRaftService { meta_manager: mm }
     }
 }
 
@@ -24,7 +24,7 @@ impl FlareMetadataRaft for FlareMetaRaftService {
         let wrapper = request.into_inner();
         let req = server_decode(&wrapper.data)?;
         let result = self
-            .mm
+            .meta_manager
             .raft
             .vote(req)
             .await
@@ -39,7 +39,7 @@ impl FlareMetadataRaft for FlareMetaRaftService {
         let wrapper = request.into_inner();
         let req = server_decode(&wrapper.data)?;
         let result = self
-            .mm
+            .meta_manager
             .raft
             .install_snapshot(req)
             .await
@@ -54,7 +54,7 @@ impl FlareMetadataRaft for FlareMetaRaftService {
         let wrapper = request.into_inner();
         let req = server_decode(&wrapper.data)?;
         let result = self
-            .mm
+            .meta_manager
             .raft
             .append_entries(req)
             .await

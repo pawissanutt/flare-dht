@@ -12,3 +12,7 @@ run-cluster RUST_LOG="INFO":
 
 run-grpcui:
      grpcui -plaintext -port 8080  localhost:8001
+
+publish:
+     cargo publish -p flare-pb
+     cargo publish -p flare-dht

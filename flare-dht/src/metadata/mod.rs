@@ -27,7 +27,9 @@ use flare_pb::flare_control_client::FlareControlClient;
 
 use crate::cli::ServerArgs;
 use crate::error::{FlareError, FlareInternalError};
-use crate::pool::{AddrResolver, ClientPool};
+use crate::pool::{
+    create_control_pool, create_data_pool, AddrResolver, ControlPool, DataPool,
+};
 use crate::raft::log::MemLogStore;
 use crate::raft::NodeId;
 use crate::shard::ShardMetadata;
@@ -71,7 +73,7 @@ pub trait MetadataManager: Send + Sync {
     fn create_watch(&self) -> tokio::sync::watch::Receiver<u64>;
 }
 
-struct RaftAddrResolver {
+pub struct RaftAddrResolver {
     state_machine: Arc<StateMachineStore<FlareMetadataSM>>,
 }
 
@@ -90,7 +92,9 @@ impl AddrResolver for RaftAddrResolver {
 #[derive(Clone)]
 #[allow(dead_code)]
 pub struct FlareMetadataManager {
-    pub client_pool: Arc<ClientPool>,
+    // pub client_pool: Arc<ClientPool>,
+    pub control_pool: Arc<ControlPool>,
+    pub data_pool: Arc<DataPool>,
     pub node_id: NodeId,
     pub(crate) raft: FlareMetaRaft,
     pub(crate) state_machine: Arc<StateMachineStore<FlareMetadataSM>>,
@@ -127,7 +131,12 @@ impl FlareMetadataManager {
         let resolver = RaftAddrResolver {
             state_machine: sm_arc.clone(),
         };
-        let client_pool = Arc::new(ClientPool::new(Arc::new(resolver)));
+        let resolver = Arc::new(resolver);
+        // let client_pool = Arc::new(ClientPool::new(resolver.clone()));
+        let control_pool = create_control_pool(resolver.clone());
+        let control_pool = Arc::new(control_pool);
+        let data_pool = create_data_pool(resolver.clone());
+        let data_pool = Arc::new(data_pool);
         let raft = FlareMetaRaft::new(
             node_id,
             config.clone(),
@@ -144,7 +153,8 @@ impl FlareMetadataManager {
             node_id,
             raft_config: config,
             flare_config: server_args,
-            client_pool,
+            control_pool,
+            data_pool,
             log_store,
             node_addr,
         }
@@ -198,6 +208,13 @@ impl FlareMetadataManager {
         } else {
             None
         }
+    }
+
+    pub fn create_resolver(&self) -> RaftAddrResolver {
+        let resolver = RaftAddrResolver {
+            state_machine: self.state_machine.clone(),
+        };
+        resolver
     }
 }
 
@@ -317,7 +334,7 @@ impl MetadataManager for FlareMetadataManager {
     ) -> Result<JoinResponse, FlareError> {
         if !self.is_leader().await {
             let leader_id = self.get_leader_id().await?;
-            let mut cc = self.client_pool.control_pool.get(leader_id).await?;
+            let mut cc = self.control_pool.get(leader_id).await?;
             return cc
                 .join(join_request)
                 .await
@@ -357,7 +374,6 @@ impl MetadataManager for FlareMetadataManager {
         if !self.is_leader().await {
             let leader_id = self.get_leader_id().await?;
             let mut cc = self
-                .client_pool
                 .control_pool
                 .get(leader_id)
                 .await
@@ -432,8 +448,9 @@ impl MetadataManager for FlareMetadataManager {
         }
         if !self.is_leader().await {
             let leader_id = self.get_leader_id().await?;
-            let mut client = self.client_pool.kv_pool.get(leader_id).await?;
-            let resp = client.create_collection(request).await?;
+            let mut client = self.data_pool.get(leader_id).await?;
+            let resp: tonic::Response<CreateCollectionResponse> =
+                client.create_collection(request).await?;
             return Ok(resp.into_inner());
         }
         if request.shard_assignments.len() != request.shard_count as usize {

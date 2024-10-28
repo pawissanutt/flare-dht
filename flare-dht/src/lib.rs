@@ -45,7 +45,6 @@ pub async fn start_server(
             .await,
     );
     metadata_manager.initialize().await?;
-    let client_pool = metadata_manager.client_pool.clone();
     let shard_manager =
         Arc::new(ShardManager::new(Box::new(HashMapShardFactory {})));
     let flare_node = FlareNode::new(
@@ -53,7 +52,8 @@ pub async fn start_server(
         node_id,
         metadata_manager.clone(),
         shard_manager,
-        client_pool.clone(),
+        metadata_manager.control_pool.clone(),
+        metadata_manager.data_pool.clone(),
     )
     .await;
 

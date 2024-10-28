@@ -11,22 +11,19 @@ use tonic::transport::Channel;
 
 use crate::{error::FlareInternalError, raft::NodeId};
 
-pub struct ClientPool {
-    pub kv_pool: ConnManager<NodeId, GrpcClientManager<FlareKvClient<Channel>>>,
-    pub control_pool:
-        ConnManager<NodeId, GrpcClientManager<FlareControlClient<Channel>>>,
+pub type ControlPool =
+    ConnManager<NodeId, GrpcClientManager<FlareControlClient<Channel>>>;
+pub type DataPool =
+    ConnManager<NodeId, GrpcClientManager<FlareKvClient<Channel>>>;
+
+pub fn create_control_pool(resolver: Arc<dyn AddrResolver>) -> ControlPool {
+    let factory = Arc::new(GrpcConnFactory { resolver });
+    return ConnManager::new(factory);
 }
 
-impl ClientPool {
-    pub fn new(resolver: Arc<dyn AddrResolver>) -> Self {
-        let factory = Arc::new(GrpcConnFactory { resolver });
-        let kv_pool = ConnManager::new(factory.clone());
-        let control_pool = ConnManager::new(factory);
-        Self {
-            kv_pool,
-            control_pool,
-        }
-    }
+pub fn create_data_pool(resolver: Arc<dyn AddrResolver>) -> DataPool {
+    let factory = Arc::new(GrpcConnFactory { resolver });
+    return ConnManager::new(factory);
 }
 
 #[async_trait::async_trait]

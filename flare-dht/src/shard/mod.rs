@@ -23,8 +23,8 @@ pub struct ShardMetadata {
 
 #[async_trait::async_trait]
 pub trait KvShard: Send + Sync {
-    type Key;
-    type Entry: Send + Sync;
+    type Key: Clone;
+    type Entry: Send + Sync + Default;
 
     fn meta(&self) -> &ShardMetadata;
 
@@ -32,6 +32,14 @@ pub trait KvShard: Send + Sync {
         &self,
         key: &Self::Key,
     ) -> Result<Option<Self::Entry>, FlareError>;
+
+    async fn modify<F, O>(
+        &self,
+        key: &Self::Key,
+        f: F,
+    ) -> Result<O, FlareError>
+    where
+        F: FnOnce(&mut Self::Entry) -> O + Send;
 
     async fn set(
         &self,

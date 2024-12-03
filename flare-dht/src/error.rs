@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, f64::consts::E};
 
 use tonic::Status;
 
@@ -36,6 +36,15 @@ pub enum FlareError {
     ConnectionPoolError(#[from] mobc::Error<FlareInternalError>),
     #[error("Infallible")]
     Infallible,
+}
+
+impl FlareError {
+    pub fn from<E>(error: E) -> FlareError
+    where
+        E: Error + Send + Sync + 'static,
+    {
+        FlareError::UnknownError(Box::new(error))
+    }
 }
 
 impl From<FlareError> for tonic::Status {

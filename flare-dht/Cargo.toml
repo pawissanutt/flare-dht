@@ -24,18 +24,18 @@ serde = { version = "1.0", features = ["derive"] }
 # serde_json = "1.0"
 rkyv = { version = "0.8", features = ["alloc"] }
 bincode = { version = "2.0.0-rc.3", features = ["serde"] }
-thiserror = "1.0"
-rancor = "0.1.0"
+thiserror = "2"
+rancor = "0.1"
 rand = "0.8"
 tsid = "0.3"
 flare-pb = {workspace=true}
 async-trait = "0.1"
 tokio-stream = { version = "0.1", features = ["sync"] }
-http = "1.1"
-bytes={version = "1.7", features = []}
+http = "1.2"
+bytes={version = "1.9", features = []}
 hashbrown = "0.15"
 mobc = "0.8"
-scc = { version = "2.1.17", features = [] }
+scc = { version = "2.2", features = [] }
 # byte-slice-cast ={ version = "1.2"}
 
 [dev-dependencies]

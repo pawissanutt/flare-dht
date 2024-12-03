@@ -38,6 +38,15 @@ pub enum FlareError {
     Infallible,
 }
 
+impl FlareError {
+    pub fn from<E>(error: E) -> FlareError
+    where
+        E: Error + Send + Sync + 'static,
+    {
+        FlareError::UnknownError(Box::new(error))
+    }
+}
+
 impl From<FlareError> for tonic::Status {
     fn from(value: FlareError) -> Self {
         match value {

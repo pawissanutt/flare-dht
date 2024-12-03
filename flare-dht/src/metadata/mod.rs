@@ -420,7 +420,6 @@ impl MetadataManager for FlareMetadataManager {
         let cm = flare_pb::ClusterMetadata {
             collections,
             shards,
-            last_shard_id: metadata_sm.last_shard_id,
         };
         Ok(cm)
     }

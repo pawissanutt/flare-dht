@@ -60,5 +60,4 @@ message ClusterMetadataRequest {
 message ClusterMetadata {
   map<string, CollectionMetadata> collections = 1;
   map<uint64, ShardMetadata> shards = 2;
-  uint64 last_shard_id = 3;
 }

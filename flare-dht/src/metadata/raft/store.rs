@@ -1,5 +1,7 @@
+use super::MetaTypeConfig;
+use crate::metadata::raft::FlareControlResponse;
 use crate::raft::state_machine::{AppStateMachine, GenericStateMachineData};
-use crate::raft::NodeId;
+use crate::NodeId;
 use openraft::storage::RaftStateMachine;
 use openraft::{
     BasicNode, Entry, EntryPayload, LogId, RaftSnapshotBuilder, RaftTypeConfig,
@@ -9,9 +11,6 @@ use std::io::Cursor;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-
-use super::state_machine::FlareControlResponse;
-use super::MetaTypeConfig;
 
 #[derive(Debug)]
 pub struct StoredSnapshot {

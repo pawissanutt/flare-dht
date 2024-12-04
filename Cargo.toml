@@ -2,13 +2,14 @@
 resolver = "2"
 members = [ 
     "flare-dht", 
-    "flare-pb"
+    "flare-pb",
+    "flare-runner"
     ]
 
 
 [workspace.package]
 authors = ["Pawissanutt Lertpongrujikorn <pawissanutt@gmail.com>"]
-version = "0.1.11"
+version = "0.1.12"
 edition = "2021"
 repository = "https://github.com/pawissanutt/flare-dht"
 license = "Apache-2.0"
@@ -21,3 +22,5 @@ flare-pb = {version = "0.1.11", path = "flare-pb"}
 prost = "0.13"
 prost-types = "0.13"
 tonic = "0.12"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

@@ -1,9 +1,10 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use flare_dht::{
+    proto::CreateCollectionRequest,
     shard::{ByteEntry, HashMapShard, KvShard},
-    start_server, FlareNode,
+    FlareNode,
 };
-use flare_pb::CreateCollectionRequest;
+use flare_runner::start_server;
 use rand::Rng;
 use std::{sync::Arc, time::Duration};
 

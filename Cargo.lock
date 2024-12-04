@@ -735,14 +735,12 @@ checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 
 [[package]]
 name = "flare-dht"
-version = "0.1.11"
+version = "0.1.12"
 dependencies = [
- "anyhow",
  "async-trait",
  "bincode",
  "bytes",
  "clap",
- "criterion",
  "flare-pb",
  "hashbrown 0.15.2",
  "http",
@@ -752,7 +750,6 @@ dependencies = [
  "rancor",
  "rand",
  "rkyv 0.8.9",
- "rlt",
  "scc",
  "serde",
  "thiserror 2.0.4",
@@ -762,18 +759,36 @@ dependencies = [
  "tonic-reflection",
  "tracing",
  "tracing-subscriber",
- "tsid",
 ]
 
 [[package]]
 name = "flare-pb"
-version = "0.1.11"
+version = "0.1.12"
 dependencies = [
  "prost",
  "prost-types",
  "serde",
  "tonic",
  "tonic-build",
+]
+
+[[package]]
+name = "flare-runner"
+version = "0.1.12"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "clap",
+ "criterion",
+ "flare-dht",
+ "rand",
+ "rlt",
+ "tokio",
+ "tonic",
+ "tonic-reflection",
+ "tracing",
+ "tracing-subscriber",
+ "tsid",
 ]
 
 [[package]]

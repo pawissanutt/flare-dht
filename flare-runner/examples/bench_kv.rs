@@ -7,8 +7,8 @@ use rlt::{
 use tokio::time::Instant;
 use tonic::transport::{Channel, Uri};
 
-use flare_pb::SetRequest;
-use flare_pb::{flare_kv_client::FlareKvClient, SingleKeyRequest};
+use flare_dht::proto::SetRequest;
+use flare_dht::proto::{flare_kv_client::FlareKvClient, SingleKeyRequest};
 use rand::Rng;
 
 #[derive(Parser, Clone)]

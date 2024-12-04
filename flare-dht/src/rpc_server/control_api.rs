@@ -10,7 +10,13 @@ use tonic::{Request, Response, Status};
 use tracing::info;
 
 pub struct FlareControlService {
-    pub(crate) metadata_manager: Arc<dyn MetadataManager>,
+    metadata_manager: Arc<dyn MetadataManager>,
+}
+
+impl FlareControlService {
+    pub fn new(metadata_manager: Arc<dyn MetadataManager>) -> Self {
+        Self { metadata_manager }
+    }
 }
 
 #[tonic::async_trait]

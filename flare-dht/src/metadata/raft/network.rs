@@ -1,6 +1,6 @@
 use crate::raft::FlareRpcError;
-use crate::raft::NodeId;
-use crate::util::{client_decode, client_encode};
+use crate::raft::{client_decode, client_encode};
+use crate::NodeId;
 use bincode::config;
 use bincode::config::Configuration;
 use flare_pb::flare_metadata_raft_client::FlareMetadataRaftClient;

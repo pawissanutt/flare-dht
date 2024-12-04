@@ -1,8 +1,8 @@
-use std::{error::Error, f64::consts::E};
+use std::error::Error;
 
 use tonic::Status;
 
-use crate::{raft::NodeId, shard::ShardId};
+use crate::{shard::ShardId, NodeId};
 
 #[derive(thiserror::Error, Debug)]
 pub enum FlareInternalError {

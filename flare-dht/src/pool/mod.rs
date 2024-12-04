@@ -9,7 +9,7 @@ use grpc::GrpcClientManager;
 use std::sync::Arc;
 use tonic::transport::Channel;
 
-use crate::{error::FlareInternalError, raft::NodeId};
+use crate::{error::FlareInternalError, NodeId};
 
 pub type ControlPool =
     ConnManager<NodeId, GrpcClientManager<FlareControlClient<Channel>>>;

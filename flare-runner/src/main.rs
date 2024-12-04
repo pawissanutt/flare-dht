@@ -1,13 +1,12 @@
-extern crate core;
+use std::error::Error;
 
 use clap::Parser;
 use flare_dht::cli::FlareCli;
-use flare_dht::handle_cli;
-use std::error::Error;
+use flare_runner::handle_cli;
 use tracing::level_filters::LevelFilter;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::{
+    layer::SubscriberExt, util::SubscriberInitExt, EnvFilter,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {

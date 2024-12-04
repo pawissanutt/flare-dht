@@ -3,8 +3,6 @@ use std::sync::Arc;
 use crate::error::FlareError;
 pub type ShardId = u64;
 mod hashmap;
-// mod remote;
-
 use bytes::Bytes;
 pub use hashmap::HashMapShard;
 pub use hashmap::HashMapShardFactory;
@@ -13,12 +11,14 @@ use scc::HashMap;
 #[derive(
     rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Debug, Default, Clone,
 )]
-#[rkyv(compare(PartialEq), derive(Debug))]
+#[rkyv(derive(Debug))]
 pub struct ShardMetadata {
     pub id: u64,
     pub collection: String,
+    pub partition_id: u16,
     pub primary: Option<u64>,
     pub replica: Vec<u64>,
+    pub options: hashbrown::HashMap<String, String>,
 }
 
 #[async_trait::async_trait]

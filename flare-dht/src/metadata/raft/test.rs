@@ -5,7 +5,7 @@ use openraft::testing::Suite;
 use openraft::StorageError;
 
 use crate::raft::log::MemLogStore;
-use crate::raft::NodeId;
+use crate::NodeId;
 
 use super::state_machine::FlareMetadataSM;
 use super::store::StateMachineStore;

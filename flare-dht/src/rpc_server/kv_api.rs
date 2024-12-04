@@ -22,7 +22,7 @@ impl<T> FlareKvService<T>
 where
     T: KvShard,
 {
-    pub(crate) fn new(flare_node: Arc<FlareNode<T>>) -> FlareKvService<T> {
+    pub fn new(flare_node: Arc<FlareNode<T>>) -> FlareKvService<T> {
         FlareKvService { flare_node }
     }
 }

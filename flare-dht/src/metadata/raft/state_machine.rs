@@ -1,12 +1,18 @@
-use crate::{raft::state_machine::AppStateMachine, shard::ShardMetadata};
+use crate::{
+    metadata::CollectionMetadata, raft::state_machine::AppStateMachine,
+    shard::ShardMetadata,
+};
+
 use flare_pb::CreateCollectionRequest;
 use rancor::Error;
 use std::collections::BTreeMap;
 
+use super::{FlareControlRequest, FlareControlResponse};
+
 #[derive(
     rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Debug, Default, Clone,
 )]
-#[rkyv(compare(PartialEq), derive(Debug))]
+#[rkyv(derive(Debug))]
 pub struct FlareMetadataSM {
     pub collections: BTreeMap<String, CollectionMetadata>,
     pub shards: BTreeMap<u64, ShardMetadata>,
@@ -62,36 +68,6 @@ impl FlareMetadataSM {
         self.collections.insert(name.into(), col_meta.clone());
         FlareControlResponse::CollectionCreated { meta: col_meta }
     }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
-pub enum FlareControlRequest {
-    CreateCollection(CreateCollectionRequest),
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
-pub enum FlareControlResponse {
-    CollectionCreated { meta: CollectionMetadata },
-    Rejected(String),
-    Empty,
-}
-
-#[derive(
-    rkyv::Archive,
-    rkyv::Serialize,
-    rkyv::Deserialize,
-    serde::Serialize,
-    serde::Deserialize,
-    Debug,
-    Default,
-    Clone,
-)]
-#[rkyv(compare(PartialEq), derive(Debug))]
-pub struct CollectionMetadata {
-    pub name: String,
-    pub shard_ids: Vec<u64>,
-    pub seed: u32,
-    pub replication: u8,
 }
 
 impl<A: crate::raft::state_machine::AppStateMachine>

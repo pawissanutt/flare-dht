@@ -1,4 +1,4 @@
-use crate::metadata::FlareMetadataManager;
+use crate::metadata::raft::FlareMetadataManager;
 use crate::util::{server_decode, server_encode};
 use flare_pb::flare_metadata_raft_server::FlareMetadataRaft;
 use flare_pb::ByteWrapper;

@@ -1,12 +1,15 @@
 use std::sync::Arc;
+mod hashmap;
+mod manager;
 
 use crate::error::FlareError;
-pub type ShardId = u64;
-mod hashmap;
+
 use bytes::Bytes;
 pub use hashmap::HashMapShard;
 pub use hashmap::HashMapShardFactory;
-use scc::HashMap;
+pub use manager::ShardManager;
+
+pub type ShardId = u64;
 
 #[derive(
     rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Debug, Default, Clone,
@@ -18,6 +21,7 @@ pub struct ShardMetadata {
     pub partition_id: u16,
     pub primary: Option<u64>,
     pub replica: Vec<u64>,
+    pub shard_type: String,
     pub options: hashbrown::HashMap<String, String>,
 }
 
@@ -114,54 +118,4 @@ where
     T: KvShard,
 {
     fn create_shard(&self, shard_metadata: ShardMetadata) -> Arc<T>;
-}
-
-#[allow(dead_code)]
-pub struct ShardManager<T>
-where
-    T: KvShard,
-{
-    pub shard_factory: Box<dyn ShardFactory<T>>,
-    pub shards: HashMap<ShardId, Arc<T>>,
-}
-
-impl<T> ShardManager<T>
-where
-    T: KvShard,
-{
-    pub fn new(shard_factory: Box<dyn ShardFactory<T>>) -> Self {
-        Self {
-            shards: HashMap::new(),
-            shard_factory,
-        }
-    }
-
-    #[inline]
-    pub fn get_shard(&self, shard_id: ShardId) -> Result<Arc<T>, FlareError> {
-        self.shards
-            .get(&shard_id)
-            .map(|shard| shard.get().clone())
-            .ok_or_else(|| FlareError::NoShardFound(shard_id))
-    }
-
-    #[inline]
-    pub fn create_shard(&self, shard_metadata: ShardMetadata) {
-        let shard = self.shard_factory.create_shard(shard_metadata);
-        let shard_id = shard.meta().id;
-        self.shards.upsert(shard_id, shard);
-    }
-
-    #[inline]
-    pub fn contains(&self, shard_id: ShardId) -> bool {
-        self.shards.contains(&shard_id)
-    }
-
-    pub fn sync_shards(&self, shard_meta: &Vec<ShardMetadata>) {
-        for s in shard_meta {
-            if self.contains(s.id) {
-                continue;
-            }
-            self.create_shard(s.clone());
-        }
-    }
 }

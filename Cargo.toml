@@ -4,7 +4,7 @@ members = [
     "flare-dht", 
     "flare-pb",
     "flare-runner"
-    ]
+    , "flare-zrpc"]
 
 
 [workspace.package]

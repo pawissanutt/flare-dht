@@ -6,7 +6,6 @@ use flare_dht::metadata::MetadataManager;
 use flare_dht::proto::flare_control_server::FlareControlServer;
 use flare_dht::proto::flare_kv_client::FlareKvClient;
 use flare_dht::proto::flare_kv_server::FlareKvServer;
-use flare_dht::proto::flare_metadata_raft_server::FlareMetadataRaftServer;
 use flare_dht::proto::CreateCollectionRequest;
 use flare_dht::rpc_server::control_api::FlareControlService;
 use flare_dht::rpc_server::kv_api::FlareKvService;

@@ -1,7 +1,6 @@
-use std::time::Duration;
 
 use flare_zrpc::{
-    BincodeMsgSerde, MsgSerde, ZrpcClient, ZrpcError, ZrpcServerError,
+    BincodeMsgSerde, ZrpcClient, ZrpcError, ZrpcServerError,
     ZrpcService, ZrpcServiceHander, ZrpcTypeConfig,
 };
 

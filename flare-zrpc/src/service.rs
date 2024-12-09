@@ -141,7 +141,7 @@ where
         };
     }
 
-    pub fn close(&mut self) {
+    pub fn close(&self) {
         self.token.cancel();
     }
 }

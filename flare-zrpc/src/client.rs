@@ -1,4 +1,4 @@
-use crate::{msg::MsgSerde, ZrpcError, ZrpcServerError, ZrpcTypeConfig};
+use crate::{msg::MsgSerde, ZrpcError, ZrpcTypeConfig};
 use std::marker::PhantomData;
 
 pub struct ZrpcClient<C>

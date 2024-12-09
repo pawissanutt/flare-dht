@@ -11,7 +11,6 @@ mod raft;
 #[cfg(feature = "cluster")]
 pub mod rpc_server;
 pub mod shard;
-mod util;
 
 pub use flare_pb as proto;
 

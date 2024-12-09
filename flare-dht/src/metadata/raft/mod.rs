@@ -45,13 +45,13 @@ openraft::declare_raft_types!(
 
 pub type FlareMetaRaft = openraft::Raft<MetaTypeConfig>;
 
-mod typ {
-    use crate::NodeId;
-    pub type RaftError<E = openraft::error::Infallible> =
-        openraft::error::RaftError<NodeId, E>;
-    pub type RPCError<E = openraft::error::Infallible> =
-        openraft::error::RPCError<NodeId, openraft::BasicNode, RaftError<E>>;
-}
+// mod typ {
+//     use crate::NodeId;
+//     pub type RaftError<E = openraft::error::Infallible> =
+//         openraft::error::RaftError<NodeId, E>;
+//     pub type RPCError<E = openraft::error::Infallible> =
+//         openraft::error::RPCError<NodeId, openraft::BasicNode, RaftError<E>>;
+// }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub enum FlareControlRequest {
@@ -65,6 +65,7 @@ pub enum FlareControlResponse {
     Empty,
 }
 
+#[allow(dead_code)]
 pub struct FlareMetadataManager {
     // pub client_pool: Arc<ClientPool>,
     pub control_pool: Arc<ControlPool>,

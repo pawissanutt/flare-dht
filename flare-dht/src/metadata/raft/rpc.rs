@@ -151,7 +151,8 @@ impl<C: RaftTypeConfig> RaftZrpcService<C> {
         Ok(())
     }
 
-    pub fn stop(&mut self) {
+    #[allow(dead_code)]
+    pub fn close(&self) {
         self.append.close();
         self.vote.close();
         self.snapshot.close();
@@ -256,13 +257,13 @@ impl<C: RaftTypeConfig> NetworkConnection<C> {
 impl<C: RaftTypeConfig> RaftNetwork<C> for NetworkConnection<C> {
     async fn append_entries(
         &mut self,
-        rpc: AppendEntriesRequest<C>,
-        option: RPCOption,
+        req: AppendEntriesRequest<C>,
+        _option: RPCOption,
     ) -> Result<
         AppendEntriesResponse<C::NodeId>,
         RPCError<C::NodeId, C::Node, RaftError<C::NodeId>>,
     > {
-        let res = self.append_client.call(rpc).await;
+        let res = self.append_client.call(req).await;
         res.map_err(|e| self.convert(e))
     }
 

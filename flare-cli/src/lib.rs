@@ -10,7 +10,6 @@ use flare_dht::proto::flare_metadata_raft_server::FlareMetadataRaftServer;
 use flare_dht::proto::CreateCollectionRequest;
 use flare_dht::rpc_server::control_api::FlareControlService;
 use flare_dht::rpc_server::kv_api::FlareKvService;
-use flare_dht::rpc_server::raft_api::FlareMetaRaftService;
 use flare_dht::shard::{HashMapShard, HashMapShardFactory, ShardManager};
 use flare_dht::FlareNode;
 use std::error::Error;
@@ -27,9 +26,19 @@ pub async fn start_server(
 
     let node_id = options.get_node_id();
     info!("use node_id: {node_id}");
+
+    let z_session = zenoh::open(zenoh::Config::default()).await.unwrap();
+    let prefix = format!("flare/{}/nodes", options.cluster_id);
+
     let metadata_manager: Arc<FlareMetadataManager> = Arc::new(
-        FlareMetadataManager::new(node_id, options.get_addr(), options.clone())
-            .await,
+        FlareMetadataManager::new(
+            node_id,
+            options.get_addr(),
+            options.clone(),
+            z_session.clone(),
+            &prefix,
+        )
+        .await,
     );
     metadata_manager.initialize().await?;
     let shard_manager =
@@ -48,7 +57,6 @@ pub async fn start_server(
     let flare_node = shared_node.clone();
     flare_node.start_watch_stream();
     let flare_kv = FlareKvService::new(shared_node.clone());
-    let flare_meta_raft = FlareMetaRaftService::new(metadata_manager.clone());
     let flare_control = FlareControlService::new(metadata_manager.clone());
 
     // let socket: SocketAddr = options.addr.parse()?;
@@ -87,7 +95,6 @@ pub async fn start_server(
                 .add_service(reflection_server_v1a)
                 .add_service(reflection_server_v1)
                 .add_service(FlareKvServer::new(flare_kv))
-                .add_service(FlareMetadataRaftServer::new(flare_meta_raft))
                 .add_service(FlareControlServer::new(flare_control))
                 .serve(socket)
                 .await

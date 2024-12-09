@@ -44,6 +44,9 @@ pub struct ServerArgs {
     /// gRPC port
     #[arg(short, long, env = "FLARE_PORT", default_value = "8001")]
     pub port: u16,
+    /// Cluster id
+    #[arg(short, long, default_value = "default")]
+    pub cluster_id: String,
     /// if start as Raft leader
     #[arg(short, long)]
     pub leader: bool,

@@ -18,7 +18,7 @@ use openraft::{
 };
 use zenoh::Session;
 
-struct AppendHandler<T: RaftTypeConfig> {
+pub struct AppendHandler<T: RaftTypeConfig> {
     raft: Raft<T>,
 }
 
@@ -45,7 +45,7 @@ impl<C: RaftTypeConfig> ZrpcTypeConfig for AppendHandler<C> {
     type ErrInner = RaftError<C::NodeId>;
 }
 
-struct VoteHandler<T: RaftTypeConfig> {
+pub struct VoteHandler<T: RaftTypeConfig> {
     raft: Raft<T>,
 }
 
@@ -70,7 +70,7 @@ impl<C: RaftTypeConfig> ZrpcTypeConfig for VoteHandler<C> {
     type ErrInner = RaftError<C::NodeId>;
 }
 
-struct InstallSnapshotHandler<T: RaftTypeConfig> {
+pub struct InstallSnapshotHandler<T: RaftTypeConfig> {
     raft: Raft<T>,
 }
 
@@ -96,43 +96,66 @@ impl<C: RaftTypeConfig> ZrpcTypeConfig for InstallSnapshotHandler<C> {
 }
 
 #[allow(type_alias_bounds)]
-type AppendService<C: RaftTypeConfig> =
+pub type AppendService<C: RaftTypeConfig> =
     flare_zrpc::ZrpcService<AppendHandler<C>, AppendHandler<C>>;
 #[allow(type_alias_bounds)]
-type VoteService<C: RaftTypeConfig> =
+pub type VoteService<C: RaftTypeConfig> =
     flare_zrpc::ZrpcService<VoteHandler<C>, VoteHandler<C>>;
 #[allow(type_alias_bounds)]
-type SnapshotService<C: RaftTypeConfig> = flare_zrpc::ZrpcService<
+pub type SnapshotService<C: RaftTypeConfig> = flare_zrpc::ZrpcService<
     InstallSnapshotHandler<C>,
     InstallSnapshotHandler<C>,
 >;
 
-pub async fn start_services<C: RaftTypeConfig>(
-    raft: Raft<C>,
-    z_session: Session,
-    rpc_prefix: String,
-    node_id: C::NodeId,
-) -> Result<(), Box<dyn Error + Send + Sync>> {
-    let append_service = AppendService::new(
-        format!("{rpc_prefix}/{node_id}/append"),
-        z_session.clone(),
-        AppendHandler { raft: raft.clone() },
-    );
-    let vote_service = VoteService::new(
-        format!("{rpc_prefix}/{node_id}/vote"),
-        z_session.clone(),
-        VoteHandler { raft: raft.clone() },
-    );
-    let snapshot_service = SnapshotService::new(
-        format!("{rpc_prefix}/{node_id}/snapshot"),
-        z_session.clone(),
-        InstallSnapshotHandler { raft: raft.clone() },
-    );
-    let _ = append_service.start().await?;
-    let _ = vote_service.start().await?;
-    let _ = snapshot_service.start().await?;
+pub struct RaftZrpcService<C: RaftTypeConfig> {
+    append: AppendService<C>,
+    vote: VoteService<C>,
+    snapshot: SnapshotService<C>,
+}
 
-    Ok(())
+impl<C: RaftTypeConfig> RaftZrpcService<C> {
+    pub fn new(
+        raft: Raft<C>,
+        z_session: Session,
+        rpc_prefix: String,
+        node_id: C::NodeId,
+    ) -> Self {
+        let append = AppendService::new(
+            format!("{rpc_prefix}/{node_id}/append"),
+            z_session.clone(),
+            AppendHandler { raft: raft.clone() },
+        );
+        let vote = VoteService::new(
+            format!("{rpc_prefix}/{node_id}/vote"),
+            z_session.clone(),
+            VoteHandler { raft: raft.clone() },
+        );
+        let snapshot = SnapshotService::new(
+            format!("{rpc_prefix}/{node_id}/snapshot"),
+            z_session.clone(),
+            InstallSnapshotHandler { raft: raft.clone() },
+        );
+
+        Self {
+            append,
+            vote,
+            snapshot,
+        }
+    }
+
+    pub async fn start(&self) -> Result<(), Box<dyn Error + Sync + Send>> {
+        self.append.start().await?;
+        self.vote.start().await?;
+        self.snapshot.start().await?;
+
+        Ok(())
+    }
+
+    pub fn stop(&mut self) {
+        self.append.close();
+        self.vote.close();
+        self.snapshot.close();
+    }
 }
 
 pub struct Network {

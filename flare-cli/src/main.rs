@@ -1,8 +1,8 @@
 use std::error::Error;
 
 use clap::Parser;
+use flare_cli::handle_cli;
 use flare_dht::cli::FlareCli;
-use flare_runner::handle_cli;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{
     layer::SubscriberExt, util::SubscriberInitExt, EnvFilter,

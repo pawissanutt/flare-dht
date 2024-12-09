@@ -1015,6 +1015,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 
 [[package]]
+name = "flare-cli"
+version = "0.1.12"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "clap",
+ "criterion",
+ "flare-dht",
+ "flare-zrpc",
+ "rand",
+ "rlt",
+ "tokio",
+ "tonic",
+ "tonic-reflection",
+ "tracing",
+ "tracing-subscriber",
+ "tsid",
+ "zenoh",
+ "zenoh-config",
+]
+
+[[package]]
 name = "flare-dht"
 version = "0.1.12"
 dependencies = [
@@ -1057,25 +1079,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "flare-runner"
-version = "0.1.12"
-dependencies = [
- "anyhow",
- "async-trait",
- "clap",
- "criterion",
- "flare-dht",
- "rand",
- "rlt",
- "tokio",
- "tonic",
- "tonic-reflection",
- "tracing",
- "tracing-subscriber",
- "tsid",
-]
-
-[[package]]
 name = "flare-zrpc"
 version = "0.1.12"
 dependencies = [
@@ -1089,6 +1092,7 @@ dependencies = [
  "serde",
  "thiserror 2.0.4",
  "tokio",
+ "tokio-util",
  "tracing",
  "tracing-test",
  "zenoh",

@@ -1,4 +1,4 @@
-mod network;
+// mod network;
 mod rpc;
 mod state_machine;
 mod store;
@@ -15,6 +15,7 @@ use store::StateMachineStore;
 use tokio_stream::StreamExt;
 use tonic::transport::Channel;
 use tracing::info;
+use zenoh::Session;
 
 use crate::proto::{
     ClusterMetadata, ClusterMetadataRequest, CreateCollectionRequest,
@@ -64,8 +65,6 @@ pub enum FlareControlResponse {
     Empty,
 }
 
-#[derive(Clone)]
-#[allow(dead_code)]
 pub struct FlareMetadataManager {
     // pub client_pool: Arc<ClientPool>,
     pub control_pool: Arc<ControlPool>,
@@ -76,6 +75,7 @@ pub struct FlareMetadataManager {
     raft_config: Arc<Config>,
     flare_config: ServerArgs,
     log_store: MemLogStore<MetaTypeConfig>,
+    rpc_service: rpc::RaftZrpcService<MetaTypeConfig>,
     node_addr: String,
 }
 
@@ -92,6 +92,8 @@ impl FlareMetadataManager {
         node_id: u64,
         node_addr: String,
         server_args: ServerArgs,
+        z_session: Session,
+        rpc_prefix: &str,
     ) -> Self {
         let config = Config {
             ..Default::default()
@@ -102,7 +104,7 @@ impl FlareMetadataManager {
         let sm: StateMachineStore<FlareMetadataSM> =
             store::StateMachineStore::default();
         let sm_arc = Arc::new(sm);
-        let network = network::Network::new();
+        let network = rpc::Network::new(z_session.clone(), rpc_prefix.into());
         let resolver = RaftAddrResolver {
             state_machine: sm_arc.clone(),
         };
@@ -121,6 +123,12 @@ impl FlareMetadataManager {
         )
         .await
         .unwrap();
+        let rpc_service = rpc::RaftZrpcService::new(
+            raft.clone(),
+            z_session,
+            rpc_prefix.into(),
+            node_id,
+        );
 
         FlareMetadataManager {
             raft,
@@ -132,6 +140,7 @@ impl FlareMetadataManager {
             data_pool,
             log_store,
             node_addr,
+            rpc_service,
         }
     }
 
@@ -196,6 +205,7 @@ impl FlareMetadataManager {
 #[async_trait::async_trait]
 impl MetadataManager for FlareMetadataManager {
     async fn initialize(&self) -> Result<(), FlareError> {
+        self.rpc_service.start().await?;
         if self.flare_config.leader {
             let mut map = BTreeMap::new();
             map.insert(

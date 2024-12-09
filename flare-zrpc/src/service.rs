@@ -1,6 +1,7 @@
 use std::{error::Error, marker::PhantomData, sync::Arc};
 
 use anyerror::AnyError;
+use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 use zenoh::query::Query;
 
@@ -30,7 +31,7 @@ where
     service_id: String,
     z_session: zenoh::Session,
     handler: Arc<T>,
-    closed: bool,
+    token: tokio_util::sync::CancellationToken,
     _conf: PhantomData<C>,
 }
 
@@ -54,36 +55,38 @@ where
             service_id,
             z_session,
             handler: Arc::new(handler),
-            closed: false,
+            token: CancellationToken::new(),
             _conf: PhantomData,
         }
     }
 
-    pub async fn start(self) -> Result<Self, Box<dyn Error + Send + Sync>> {
+    pub async fn start(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
         let service_id = self.service_id.clone();
         info!("registering rpc on '{}'", service_id);
         let z_session = self.z_session.clone();
         let handler = self.handler.clone();
+        let cloned_token = self.token.clone();
         tokio::spawn(async move {
             let queryable = z_session
                 .declare_queryable(service_id.clone())
                 .await
                 .unwrap();
             loop {
-                match queryable.recv_async().await {
-                    Ok(query) => Self::handle(handler.clone(), query).await,
-                    Err(err) => {
-                        error!("error on queryable '{}': {}", service_id, err,);
+                tokio::select! {
+                    query_res = queryable.recv_async() => match query_res {
+                        Ok(query) => Self::handle(handler.clone(), query).await,
+                        Err(err) => {
+                            error!("error on queryable '{}': {}", service_id, err,);
+                            break;
+                        }
+                    },
+                    _ = cloned_token.cancelled() => {
                         break;
                     }
                 }
-                if self.closed {
-                    break;
-                }
             }
         });
-
-        Ok(self)
+        Ok(())
     }
 
     async fn handle(handler: Arc<T>, query: Query) {
@@ -139,7 +142,7 @@ where
     }
 
     pub fn close(&mut self) {
-        self.closed = true;
+        self.token.cancel();
     }
 }
 

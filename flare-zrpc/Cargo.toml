@@ -1,5 +1,6 @@
 [package]
 name = "flare-zrpc"
+description = "Simple rpc library on top of Zenoh and bincode"
 authors.workspace = true
 version.workspace = true
 edition.workspace = true
@@ -8,17 +9,17 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-async-trait = {version = "0.1"}
-zenoh = {version = "1"}
-zenoh-config = {version = "1"}
-serde = {version = "1", features = ["derive"]}
-bincode = {version = "2.0.0-rc.3", features = ["serde"]}
-tokio = { version = "1", features = ["rt-multi-thread", ] }
-thiserror = "2"
-tracing = "0.1.40"
-bytes ={ version = "1", features = ["serde"]}
-flume ={ version = "0.11"}
-# anyhow = {version = "1"}
+async-trait = {workspace = true}
+zenoh = {workspace = true}
+zenoh-config = {workspace = true}
+serde = {workspace = true}
+bincode = {workspace = true}
+tokio = {workspace = true}
+thiserror = {workspace = true}
+tracing = {workspace = true}
+bytes ={workspace = true}
+flume ={workspace = true}
+anyerror ={ version = "0.1"}
 
 [dev-dependencies]
 anyhow = "1"

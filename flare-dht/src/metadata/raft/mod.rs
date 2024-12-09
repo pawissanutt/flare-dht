@@ -1,4 +1,5 @@
 mod network;
+mod rpc;
 mod state_machine;
 mod store;
 #[cfg(test)]

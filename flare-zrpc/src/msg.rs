@@ -3,16 +3,30 @@ use std::marker::PhantomData;
 use bincode::error::{DecodeError, EncodeError};
 use zenoh::bytes::ZBytes;
 
-
-pub trait MsgSerde: Clone + Send + Sync {
-    type Data: serde::Serialize
-        + serde::de::DeserializeOwned
-        + Clone
-        + Send
-        + Sync;
+pub trait MsgSerde: Send + Sync {
+    type Data: Send + Sync;
 
     const BINCODE_CONFIG: bincode::config::Configuration =
         bincode::config::standard();
+
+    fn to_zbyte(payload: Self::Data) -> Result<ZBytes, EncodeError>;
+
+    fn from_zbyte(payload: &ZBytes) -> Result<Self::Data, DecodeError>;
+}
+
+#[derive(Clone)]
+pub struct BincodeMsgSerde<T>
+where
+    T: serde::Serialize + serde::de::DeserializeOwned + Send + Sync,
+{
+    _data: PhantomData<T>,
+}
+
+impl<T> MsgSerde for BincodeMsgSerde<T>
+where
+    T: serde::Serialize + serde::de::DeserializeOwned + Send + Sync,
+{
+    type Data = T;
 
     fn to_zbyte(payload: Self::Data) -> Result<ZBytes, EncodeError> {
         let payload =
@@ -29,16 +43,4 @@ pub trait MsgSerde: Clone + Send + Sync {
         .0;
         return Ok(resp);
     }
-}
-
-#[derive(Clone)]
-pub struct AnyMsgSerde<T> {
-    _data: PhantomData<T>,
-}
-
-impl<T> MsgSerde for AnyMsgSerde<T>
-where
-    T: serde::Serialize + serde::de::DeserializeOwned + Clone + Send + Sync,
-{
-    type Data = T;
 }

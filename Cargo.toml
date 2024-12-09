@@ -17,10 +17,21 @@ rust-version = "1.81"
 
 
 [workspace.dependencies]
-flare-dht = {version = "0.1.11", path = "flare-dht"}
-flare-pb = {version = "0.1.11", path = "flare-pb"}
+flare-dht = {version = "0.1.12", path = "flare-dht"}
+flare-pb = {version = "0.1.12", path = "flare-pb"}
+flare-zrpc = {version = "0.1.12", path = "flare-zrpc"}
+flare-runner = {version = "0.1.12", path = "flare-runner"}
+async-trait = {version = "0.1"}
+bincode = {version = "2.0.0-rc.3", features = ["serde"]}
+bytes ={ version = "1", features = ["serde"]}
+flume ={ version = "0.11"}
 prost = "0.13"
 prost-types = "0.13"
+thiserror = "2"
+serde = { version = "1.0", features = ["derive"] }
 tonic = "0.12"
+tokio = { version = "1", features = ["rt-multi-thread", ] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+zenoh ={ version = "1"}
+zenoh-config = {version = "1"}

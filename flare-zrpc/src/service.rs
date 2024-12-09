@@ -1,9 +1,10 @@
 use std::{error::Error, marker::PhantomData, sync::Arc};
 
+use anyerror::AnyError;
 use tracing::{error, info, warn};
 use zenoh::query::Query;
 
-use crate::{msg::MsgSerde, ZrpcServerError};
+use crate::{msg::MsgSerde, ZrpcServerError, ZrpcTypeConfig};
 
 #[async_trait::async_trait]
 pub trait ZrpcServiceHander {
@@ -15,32 +16,32 @@ pub trait ZrpcServiceHander {
 }
 
 #[derive(Clone)]
-pub struct ZrpcService<T, I, O, EIN, EOUT>
+pub struct ZrpcService<T, C>
 where
-    I: MsgSerde,
-    O: MsgSerde,
-    EOUT: MsgSerde<Data = ZrpcServerError<EIN>>,
-    T: ZrpcServiceHander<In = I::Data, Out = O::Data, Err = EIN>
-        + Send
+    C: ZrpcTypeConfig,
+    T: ZrpcServiceHander<
+            In = <C::In as MsgSerde>::Data,
+            Out = <C::Out as MsgSerde>::Data,
+            Err = C::ErrInner,
+        > + Send
         + Sync
         + 'static,
 {
     service_id: String,
     z_session: zenoh::Session,
     handler: Arc<T>,
-    _req_serde: PhantomData<I>,
-    _resp_serde: PhantomData<O>,
-    _err_serde: PhantomData<EOUT>,
+    closed: bool,
+    _conf: PhantomData<C>,
 }
 
-impl<T, I, O, EIN, EOUT> ZrpcService<T, I, O, EIN, EOUT>
+impl<T, C> ZrpcService<T, C>
 where
-    I: MsgSerde,
-    O: MsgSerde,
-    EIN: Send + Sync,
-    EOUT: MsgSerde<Data = ZrpcServerError<EIN>>,
-    T: ZrpcServiceHander<In = I::Data, Out = O::Data, Err = EIN>
-        + Send
+    C: ZrpcTypeConfig,
+    T: ZrpcServiceHander<
+            In = <C::In as MsgSerde>::Data,
+            Out = <C::Out as MsgSerde>::Data,
+            Err = C::ErrInner,
+        > + Send
         + Sync
         + 'static,
 {
@@ -53,9 +54,8 @@ where
             service_id,
             z_session,
             handler: Arc::new(handler),
-            _req_serde: PhantomData,
-            _resp_serde: PhantomData,
-            _err_serde: PhantomData,
+            closed: false,
+            _conf: PhantomData,
         }
     }
 
@@ -77,6 +77,9 @@ where
                         break;
                     }
                 }
+                if self.closed {
+                    break;
+                }
             }
         });
 
@@ -85,7 +88,7 @@ where
 
     async fn handle(handler: Arc<T>, query: Query) {
         if let Some(payload) = query.payload() {
-            match I::from_zbyte(payload) {
+            match <C::In as MsgSerde>::from_zbyte(payload) {
                 Ok(data) => {
                     match handler.handle(data).await {
                         Ok(output) => {
@@ -101,8 +104,9 @@ where
                     };
                 }
                 Err(err) => {
-                    let zse =
-                        ZrpcServerError::DecodeError::<EIN>(err.to_string());
+                    let zse = ZrpcServerError::DecodeError::<C::ErrInner>(
+                        AnyError::new(&err),
+                    );
                     Self::write_error(zse, query).await;
                 }
             }
@@ -111,25 +115,31 @@ where
         }
     }
 
-    async fn write_output(out: O::Data, query: Query) {
-        match O::to_zbyte(out) {
+    async fn write_output(out: <C::Out as MsgSerde>::Data, query: Query) {
+        match <C::Out as MsgSerde>::to_zbyte(out) {
             Ok(byte) => {
                 if let Err(e) = query.reply(query.key_expr(), byte).await {
                     warn!("error on replying '{}', {}", query.key_expr(), e);
                 }
             }
             Err(err) => {
-                let zse = ZrpcServerError::EncodeError::<EIN>(err.to_string());
+                let zse = ZrpcServerError::EncodeError::<C::ErrInner>(
+                    AnyError::new(&err),
+                );
                 Self::write_error(zse, query).await;
             }
         }
     }
 
-    async fn write_error(err: EOUT::Data, query: Query) {
-        let bytes = EOUT::to_zbyte(err).expect("Encode error message error");
+    async fn write_error(err: <C::Err as MsgSerde>::Data, query: Query) {
+        let bytes = C::Err::to_zbyte(err).expect("Encode error message error");
         if let Err(e) = query.reply_err(bytes).await {
             warn!("error on error replying '{}', {}", query.key_expr(), e);
         };
+    }
+
+    pub fn close(&mut self) {
+        self.closed = true;
     }
 }
 

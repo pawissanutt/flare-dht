@@ -9,7 +9,7 @@ members = [
 
 [workspace.package]
 authors = ["Pawissanutt Lertpongrujikorn <pawissanutt@gmail.com>"]
-version = "0.1.12"
+version = "0.1.13"
 edition = "2021"
 repository = "https://github.com/pawissanutt/flare-dht"
 license = "Apache-2.0"

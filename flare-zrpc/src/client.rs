@@ -1,3 +1,5 @@
+use zenoh::key_expr::{self, KeyExpr};
+
 use crate::{msg::MsgSerde, ZrpcError, ZrpcTypeConfig};
 use std::marker::PhantomData;
 
@@ -5,7 +7,7 @@ pub struct ZrpcClient<C>
 where
     C: ZrpcTypeConfig,
 {
-    service_id: String,
+    key_expr: KeyExpr<'static>,
     z_session: zenoh::Session,
     _conf: PhantomData<C>,
 }
@@ -14,9 +16,13 @@ impl<C> ZrpcClient<C>
 where
     C: ZrpcTypeConfig,
 {
-    pub fn new(service_id: String, z_session: zenoh::Session) -> Self {
+    pub async fn new(service_id: String, z_session: zenoh::Session) -> Self {
+        let key_expr = z_session
+            .declare_keyexpr(service_id)
+            .await
+            .expect("Declare key_expr for zenoh");
         Self {
-            service_id,
+            key_expr,
             z_session,
             _conf: PhantomData,
         }
@@ -28,7 +34,7 @@ where
     ) -> Result<<C::Out as MsgSerde>::Data, ZrpcError<C::ErrInner>> {
         let get_result = self
             .z_session
-            .get(self.service_id.clone())
+            .get(self.key_expr.clone())
             .target(zenoh::query::QueryTarget::BestMatching)
             .payload(<C::In as MsgSerde>::to_zbyte(payload)?)
             .await?;

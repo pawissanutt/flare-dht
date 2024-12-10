@@ -186,6 +186,7 @@ impl<C: RaftTypeConfig> RaftNetworkFactory<C> for Network {
             self.rpc_prefix.clone(),
             target,
         )
+        .await
     }
 }
 
@@ -207,20 +208,27 @@ pub struct NetworkConnection<C: RaftTypeConfig> {
 }
 
 impl<C: RaftTypeConfig> NetworkConnection<C> {
-    fn new(z_session: Session, rpc_prefix: String, target: C::NodeId) -> Self {
+    async fn new(
+        z_session: Session,
+        rpc_prefix: String,
+        target: C::NodeId,
+    ) -> Self {
         let append_client = AppendClient::new(
             format!("{rpc_prefix}/{target}/append"),
             z_session.clone(),
-        );
+        )
+        .await;
         let vote_client = VoteClient::<C>::new(
             format!("{rpc_prefix}/{target}/vote"),
             z_session.clone(),
-        );
+        )
+        .await;
 
         let snapshot_client = InstallSnapshotClient::new(
             format!("{rpc_prefix}/{target}/snapshot"),
             z_session.clone(),
-        );
+        )
+        .await;
         Self {
             target,
             append_client,

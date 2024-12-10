@@ -1,7 +1,6 @@
-
 use flare_zrpc::{
-    BincodeMsgSerde, ZrpcClient, ZrpcError, ZrpcServerError,
-    ZrpcService, ZrpcServiceHander, ZrpcTypeConfig,
+    BincodeMsgSerde, ZrpcClient, ZrpcError, ZrpcServerError, ZrpcService,
+    ZrpcServiceHander, ZrpcTypeConfig,
 };
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -63,7 +62,7 @@ async fn test() {
     let _service = service.start().await.unwrap();
 
     let z_session_2 = zenoh::open(zenoh::Config::default()).await.unwrap();
-    let client = TestClient::new("test".into(), z_session_2.clone());
+    let client = TestClient::new("test".into(), z_session_2.clone()).await;
     for i in 1..10 {
         info!("call rpc = {}", i);
         let out = client

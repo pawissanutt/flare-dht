@@ -6,6 +6,7 @@ mod store;
 mod test;
 
 use flare_pb::flare_control_client::FlareControlClient;
+use flare_pb::ShardAssignment;
 use http::Uri;
 use openraft::{BasicNode, ChangeMembers, Config};
 use state_machine::FlareMetadataSM;
@@ -44,14 +45,6 @@ openraft::declare_raft_types!(
 );
 
 pub type FlareMetaRaft = openraft::Raft<MetaTypeConfig>;
-
-// mod typ {
-//     use crate::NodeId;
-//     pub type RaftError<E = openraft::error::Infallible> =
-//         openraft::error::RaftError<NodeId, E>;
-//     pub type RPCError<E = openraft::error::Infallible> =
-//         openraft::error::RPCError<NodeId, openraft::BasicNode, RaftError<E>>;
-// }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub enum FlareControlRequest {
@@ -392,15 +385,7 @@ impl MetadataManager for FlareMetadataManager {
         let mut shards = HashMap::with_capacity(metadata_sm.shards.len());
         let ssm = &metadata_sm.shards;
         for (id, shard) in ssm.iter() {
-            shards.insert(
-                *id,
-                flare_pb::ShardMetadata {
-                    id: shard.id,
-                    collection: shard.collection.clone(),
-                    primary: shard.primary,
-                    replica: shard.replica.clone(),
-                },
-            );
+            shards.insert(*id, shard.into_proto());
         }
 
         let cm = flare_pb::ClusterMetadata {
@@ -439,9 +424,31 @@ impl MetadataManager for FlareMetadataManager {
             return Ok(resp.into_inner());
         }
         if request.shard_assignments.len() != request.shard_count as usize {
-            let node_id = self.node_id;
-            request.shard_assignments =
-                vec![node_id].repeat(request.shard_count as usize);
+            let sm = self.state_machine.state_machine.read().await;
+            let members = sm
+                .last_membership
+                .nodes()
+                .map(|pair| *pair.0)
+                .collect::<Vec<u64>>();
+            let shard_count = request.shard_count;
+            let replica_count = request.replica_count;
+            let mut assignments = Vec::with_capacity(shard_count as usize);
+            for shard_id in 0..shard_count {
+                let primary_index = shard_id as usize % members.len();
+                let mut replicas = Vec::with_capacity(replica_count as usize);
+
+                for i in 1..=replica_count {
+                    let replica_index =
+                        (primary_index + i as usize) % members.len();
+                    replicas.push(members[replica_index]);
+                }
+
+                assignments.push(ShardAssignment {
+                    primary: members[primary_index],
+                    replica: replicas,
+                });
+            }
+            request.shard_assignments = assignments;
         }
         let req = FlareControlRequest::CreateCollection(request);
         let resp = self

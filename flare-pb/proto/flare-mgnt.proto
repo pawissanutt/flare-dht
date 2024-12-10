@@ -3,22 +3,11 @@ package flare;
 
 import "flare-common.proto";
 
-service FlareMetadataRaft {
-  rpc Vote(ByteWrapper) returns (ByteWrapper);
-  rpc Snapshot(ByteWrapper) returns (ByteWrapper);
-  rpc Append(ByteWrapper) returns (ByteWrapper);
-}
-
-
 service FlareControl {
   rpc Join(JoinRequest) returns (JoinResponse);
   rpc Leave(LeaveRequest) returns (LeaveResponse);
   rpc GetTopology(ClusterTopologyRequest) returns (ClusterTopologyInfo);
   rpc GetMetadata(ClusterMetadataRequest) returns (ClusterMetadata);
-}
-
-message ByteWrapper {
-  bytes data = 1;
 }
 
 message JoinRequest {

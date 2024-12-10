@@ -48,10 +48,12 @@ impl FlareMetadataSM {
         let mut shard_ids = Vec::with_capacity(shard_count as usize);
         for i in 0..shard_count {
             let id = i as u64 + self.last_shard_id + 1;
+            let assignment = &req.shard_assignments[i as usize];
             let shard_meta = ShardMetadata {
                 id: id,
                 collection: name.into(),
-                primary: Some(req.shard_assignments[i as usize]),
+                primary: Some(assignment.primary),
+                replica: assignment.replica.clone(),
                 ..Default::default()
             };
             shard_ids.push(id);

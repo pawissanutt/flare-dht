@@ -22,7 +22,20 @@ pub struct ShardMetadata {
     pub primary: Option<u64>,
     pub replica: Vec<u64>,
     pub shard_type: String,
-    pub options: hashbrown::HashMap<String, String>,
+    pub options: std::collections::HashMap<String, String>,
+}
+
+impl ShardMetadata {
+    pub fn into_proto(&self) -> flare_pb::ShardMetadata {
+        flare_pb::ShardMetadata {
+            id: self.id,
+            collection: self.collection.clone(),
+            primary: self.primary,
+            replica: self.replica.clone(),
+            shard_type: self.shard_type.clone(),
+            options: self.options.clone(),
+        }
+    }
 }
 
 #[async_trait::async_trait]

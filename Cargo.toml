@@ -3,8 +3,8 @@ resolver = "2"
 members = [ 
     "flare-dht", 
     "flare-pb",
-    "flare-cli"
-    , "flare-zrpc"]
+    "flare-cli", 
+    "flare-zrpc"]
 
 
 [workspace.package]

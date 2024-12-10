@@ -1,5 +1,6 @@
 [package]
 name = "flare-cli"
+description = "CLI to run/interact with flare-dht."
 authors.workspace = true
 version.workspace = true
 edition.workspace = true

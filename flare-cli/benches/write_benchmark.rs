@@ -46,6 +46,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     name: "benches".into(),
                     shard_count: 16,
                     shard_assignments: vec![],
+                    ..Default::default()
                 })
                 .await
                 .unwrap();

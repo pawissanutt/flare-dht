@@ -38,12 +38,6 @@ impl<APP: AppStateMachine> GenericStateMachineData<APP> {
             .map_err(|e| StorageIOError::read_state_machine(&e))
     }
 
-    // #[inline]
-    // pub fn apply(&mut self, request: &APP::Request) -> APP::Response {
-    //     self.app_data.apply(request)
-
-    // }
-
     pub fn apply_command<C: RaftCommand<APP>>(
         &mut self,
         req: &C,

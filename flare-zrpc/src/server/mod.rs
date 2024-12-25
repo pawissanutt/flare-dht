@@ -5,28 +5,23 @@ use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 use zenoh::query::Query;
 
-use crate::{msg::MsgSerde, ZrpcServerError, ZrpcTypeConfig};
+use crate::msg::MsgSerde;
+
+use crate::{
+    error::{ZrpcServerError, ZrpcSystemError},
+    ZrpcTypeConfig,
+};
 
 #[async_trait::async_trait]
-pub trait ZrpcServiceHander {
-    type In;
-    type Out;
-    type Err;
-
-    async fn handle(&self, req: Self::In) -> Result<Self::Out, Self::Err>;
+pub trait ZrpcServiceHander<C: ZrpcTypeConfig> {
+    async fn handle(&self, req: C::In) -> Result<C::Out, C::Err>;
 }
 
 #[derive(Clone)]
 pub struct ZrpcService<T, C>
 where
     C: ZrpcTypeConfig,
-    T: ZrpcServiceHander<
-            In = <C::In as MsgSerde>::Data,
-            Out = <C::Out as MsgSerde>::Data,
-            Err = C::ErrInner,
-        > + Send
-        + Sync
-        + 'static,
+    T: ZrpcServiceHander<C> + Send + Sync + 'static,
 {
     service_id: String,
     z_session: zenoh::Session,
@@ -38,13 +33,7 @@ where
 impl<T, C> ZrpcService<T, C>
 where
     C: ZrpcTypeConfig,
-    T: ZrpcServiceHander<
-            In = <C::In as MsgSerde>::Data,
-            Out = <C::Out as MsgSerde>::Data,
-            Err = C::ErrInner,
-        > + Send
-        + Sync
-        + 'static,
+    T: ZrpcServiceHander<C> + Send + Sync + 'static,
 {
     pub fn new(
         service_id: String,
@@ -91,26 +80,12 @@ where
 
     async fn handle(handler: Arc<T>, query: Query) {
         if let Some(payload) = query.payload() {
-            match <C::In as MsgSerde>::from_zbyte(payload) {
-                Ok(data) => {
-                    match handler.handle(data).await {
-                        Ok(output) => {
-                            Self::write_output(output, query).await;
-                        }
-                        Err(err) => {
-                            Self::write_error(
-                                ZrpcServerError::AppError(err),
-                                query,
-                            )
-                            .await;
-                        }
-                    };
-                }
+            match C::InSerde::from_zbyte(payload) {
+                Ok(data) => Self::run_handler(handler, query, data).await,
                 Err(err) => {
-                    let zse = ZrpcServerError::DecodeError::<C::ErrInner>(
-                        AnyError::new(&err),
-                    );
-                    Self::write_error(zse, query).await;
+                    let zse = ZrpcSystemError::DecodeError(AnyError::new(&err));
+                    Self::write_error(ZrpcServerError::SystemError(zse), query)
+                        .await;
                 }
             }
         } else {
@@ -118,24 +93,35 @@ where
         }
     }
 
-    async fn write_output(out: <C::Out as MsgSerde>::Data, query: Query) {
-        match <C::Out as MsgSerde>::to_zbyte(out) {
+    async fn run_handler(handler: Arc<T>, query: Query, payload: C::In) {
+        let result = handler.handle(payload).await;
+        match result {
+            Ok(ok) => Self::write_output(ok, query).await,
+            Err(err) => {
+                Self::write_error(ZrpcServerError::AppError(err), query).await
+            }
+        }
+    }
+
+    async fn write_output(out: C::Out, query: Query) {
+        match C::OutSerde::to_zbyte(out) {
             Ok(byte) => {
                 if let Err(e) = query.reply(query.key_expr(), byte).await {
                     warn!("error on replying '{}', {}", query.key_expr(), e);
                 }
             }
             Err(err) => {
-                let zse = ZrpcServerError::EncodeError::<C::ErrInner>(
-                    AnyError::new(&err),
-                );
-                Self::write_error(zse, query).await;
+                let zse = ZrpcSystemError::EncodeError(AnyError::new(&err));
+                Self::write_error(ZrpcServerError::SystemError(zse), query)
+                    .await;
             }
         }
     }
 
-    async fn write_error(err: <C::Err as MsgSerde>::Data, query: Query) {
-        let bytes = C::Err::to_zbyte(err).expect("Encode error message error");
+    async fn write_error(err: ZrpcServerError<C::Err>, query: Query) {
+        let wrapper = C::wrap(err);
+        let bytes =
+            C::ErrSerde::to_zbyte(wrapper).expect("Encode error message error");
         if let Err(e) = query.reply_err(bytes).await {
             warn!("error on error replying '{}', {}", query.key_expr(), e);
         };
@@ -143,28 +129,5 @@ where
 
     pub fn close(&self) {
         self.token.cancel();
-    }
-}
-
-#[cfg(test)]
-mod test {
-
-    use super::ZrpcServiceHander;
-
-    #[derive(serde::Serialize, serde::Deserialize, Clone)]
-    struct TestMsg(u64);
-    struct TestHandler;
-
-    #[async_trait::async_trait]
-    impl ZrpcServiceHander for TestHandler {
-        type In = TestMsg;
-
-        type Out = TestMsg;
-
-        type Err = TestMsg;
-
-        async fn handle(&self, _req: TestMsg) -> Result<TestMsg, TestMsg> {
-            Ok(TestMsg(1))
-        }
     }
 }

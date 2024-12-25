@@ -1089,6 +1089,7 @@ dependencies = [
  "bytes",
  "flume",
  "pretty_assertions",
+ "prost",
  "serde",
  "thiserror 2.0.4",
  "tokio",

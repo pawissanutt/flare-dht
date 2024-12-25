@@ -2,8 +2,8 @@ use std::error::Error;
 
 use anyerror::AnyError;
 use flare_zrpc::{
-    BincodeMsgSerde, ZrpcClient, ZrpcError, ZrpcServerError, ZrpcServiceHander,
-    ZrpcTypeConfig,
+    bincode::BincodeZrpcType, ZrpcClient, ZrpcError, ZrpcServerError,
+    ZrpcServiceHander,
 };
 use openraft::{
     error::{
@@ -18,94 +18,82 @@ use openraft::{
 };
 use zenoh::Session;
 
+#[allow(type_alias_bounds)]
+type AppendType<C: RaftTypeConfig> = BincodeZrpcType<
+    AppendEntriesRequest<C>,
+    AppendEntriesResponse<C::NodeId>,
+    RaftError<C::NodeId>,
+>;
+
 pub struct AppendHandler<T: RaftTypeConfig> {
     raft: Raft<T>,
 }
 
 #[async_trait::async_trait]
-impl<C: RaftTypeConfig> ZrpcServiceHander for AppendHandler<C> {
-    type In = AppendEntriesRequest<C>;
-    type Out = AppendEntriesResponse<C::NodeId>;
-    type Err = RaftError<C::NodeId>;
-
-    async fn handle(&self, req: Self::In) -> Result<Self::Out, Self::Err> {
+impl<C: RaftTypeConfig> ZrpcServiceHander<AppendType<C>> for AppendHandler<C> {
+    async fn handle(
+        &self,
+        req: AppendEntriesRequest<C>,
+    ) -> Result<AppendEntriesResponse<C::NodeId>, RaftError<C::NodeId>> {
         self.raft.append_entries(req).await
     }
 }
 
-// struct AppendType;
-
-impl<C: RaftTypeConfig> ZrpcTypeConfig for AppendHandler<C> {
-    type In = BincodeMsgSerde<AppendEntriesRequest<C>>;
-
-    type Out = BincodeMsgSerde<AppendEntriesResponse<C::NodeId>>;
-
-    type Err = BincodeMsgSerde<ZrpcServerError<Self::ErrInner>>;
-
-    type ErrInner = RaftError<C::NodeId>;
-}
-
+#[allow(type_alias_bounds)]
+type VoteType<C: RaftTypeConfig> = BincodeZrpcType<
+    VoteRequest<C::NodeId>,
+    VoteResponse<C::NodeId>,
+    RaftError<C::NodeId>,
+>;
 pub struct VoteHandler<T: RaftTypeConfig> {
     raft: Raft<T>,
 }
 
 #[async_trait::async_trait]
-impl<T: RaftTypeConfig> ZrpcServiceHander for VoteHandler<T> {
-    type In = VoteRequest<T::NodeId>;
-    type Out = VoteResponse<T::NodeId>;
-    type Err = RaftError<T::NodeId>;
-
-    async fn handle(&self, req: Self::In) -> Result<Self::Out, Self::Err> {
+impl<C: RaftTypeConfig> ZrpcServiceHander<VoteType<C>> for VoteHandler<C> {
+    async fn handle(
+        &self,
+        req: VoteRequest<C::NodeId>,
+    ) -> Result<VoteResponse<C::NodeId>, RaftError<C::NodeId>> {
         self.raft.vote(req).await
     }
 }
 
-impl<C: RaftTypeConfig> ZrpcTypeConfig for VoteHandler<C> {
-    type In = BincodeMsgSerde<VoteRequest<C::NodeId>>;
-
-    type Out = BincodeMsgSerde<VoteResponse<C::NodeId>>;
-
-    type Err = BincodeMsgSerde<ZrpcServerError<Self::ErrInner>>;
-
-    type ErrInner = RaftError<C::NodeId>;
-}
+#[allow(type_alias_bounds)]
+type InstallSnapshotType<C: RaftTypeConfig> = BincodeZrpcType<
+    InstallSnapshotRequest<C>,
+    InstallSnapshotResponse<C::NodeId>,
+    RaftError<C::NodeId, InstallSnapshotError>,
+>;
 
 pub struct InstallSnapshotHandler<T: RaftTypeConfig> {
     raft: Raft<T>,
 }
 
 #[async_trait::async_trait]
-impl<C: RaftTypeConfig> ZrpcServiceHander for InstallSnapshotHandler<C> {
-    type In = InstallSnapshotRequest<C>;
-    type Out = InstallSnapshotResponse<C::NodeId>;
-    type Err = RaftError<C::NodeId, InstallSnapshotError>;
-
-    async fn handle(&self, req: Self::In) -> Result<Self::Out, Self::Err> {
+impl<C: RaftTypeConfig> ZrpcServiceHander<InstallSnapshotType<C>>
+    for InstallSnapshotHandler<C>
+{
+    async fn handle(
+        &self,
+        req: InstallSnapshotRequest<C>,
+    ) -> Result<
+        InstallSnapshotResponse<C::NodeId>,
+        RaftError<C::NodeId, InstallSnapshotError>,
+    > {
         self.raft.install_snapshot(req).await
     }
 }
 
-impl<C: RaftTypeConfig> ZrpcTypeConfig for InstallSnapshotHandler<C> {
-    type In = BincodeMsgSerde<InstallSnapshotRequest<C>>;
-
-    type Out = BincodeMsgSerde<InstallSnapshotResponse<C::NodeId>>;
-
-    type Err = BincodeMsgSerde<ZrpcServerError<Self::ErrInner>>;
-
-    type ErrInner = RaftError<C::NodeId, InstallSnapshotError>;
-}
-
 #[allow(type_alias_bounds)]
 pub type AppendService<C: RaftTypeConfig> =
-    flare_zrpc::ZrpcService<AppendHandler<C>, AppendHandler<C>>;
+    flare_zrpc::ZrpcService<AppendHandler<C>, AppendType<C>>;
 #[allow(type_alias_bounds)]
 pub type VoteService<C: RaftTypeConfig> =
-    flare_zrpc::ZrpcService<VoteHandler<C>, VoteHandler<C>>;
+    flare_zrpc::ZrpcService<VoteHandler<C>, VoteType<C>>;
 #[allow(type_alias_bounds)]
-pub type SnapshotService<C: RaftTypeConfig> = flare_zrpc::ZrpcService<
-    InstallSnapshotHandler<C>,
-    InstallSnapshotHandler<C>,
->;
+pub type SnapshotService<C: RaftTypeConfig> =
+    flare_zrpc::ZrpcService<InstallSnapshotHandler<C>, InstallSnapshotType<C>>;
 
 pub struct RaftZrpcService<C: RaftTypeConfig> {
     append: AppendService<C>,
@@ -191,14 +179,14 @@ impl<C: RaftTypeConfig> RaftNetworkFactory<C> for Network {
 }
 
 #[allow(type_alias_bounds)]
-type AppendClient<C: RaftTypeConfig> = ZrpcClient<AppendHandler<C>>;
+type AppendClient<C: RaftTypeConfig> = ZrpcClient<AppendType<C>>;
 
 #[allow(type_alias_bounds)]
-type VoteClient<C: RaftTypeConfig> = ZrpcClient<VoteHandler<C>>;
+type VoteClient<C: RaftTypeConfig> = ZrpcClient<VoteType<C>>;
 
 #[allow(type_alias_bounds)]
 type InstallSnapshotClient<C: RaftTypeConfig> =
-    ZrpcClient<InstallSnapshotHandler<C>>;
+    ZrpcClient<InstallSnapshotType<C>>;
 
 pub struct NetworkConnection<C: RaftTypeConfig> {
     target: C::NodeId,

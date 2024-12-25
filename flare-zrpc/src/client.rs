@@ -1,7 +1,9 @@
-use zenoh::key_expr::{self, KeyExpr};
+use zenoh::key_expr::KeyExpr;
 
-use crate::{msg::MsgSerde, ZrpcError, ZrpcTypeConfig};
+use crate::{msg::MsgSerde, ZrpcError};
 use std::marker::PhantomData;
+
+use super::ZrpcTypeConfig;
 
 pub struct ZrpcClient<C>
 where
@@ -30,23 +32,36 @@ where
 
     pub async fn call(
         &self,
-        payload: <C::In as MsgSerde>::Data,
-    ) -> Result<<C::Out as MsgSerde>::Data, ZrpcError<C::ErrInner>> {
+        payload: C::In,
+    ) -> Result<C::Out, ZrpcError<C::Err>> {
+        let byte = C::InSerde::to_zbyte(payload)
+            .map_err(|e| ZrpcError::EncodeError(e))?;
         let get_result = self
             .z_session
             .get(self.key_expr.clone())
             .target(zenoh::query::QueryTarget::BestMatching)
-            .payload(<C::In as MsgSerde>::to_zbyte(payload)?)
+            .payload(byte)
             .await?;
         let reply = get_result.recv_async().await?;
         match reply.result() {
             Ok(sample) => {
-                let res = <C::Out as MsgSerde>::from_zbyte(sample.payload())?;
+                let res = C::OutSerde::from_zbyte(sample.payload())
+                    .map_err(|e| ZrpcError::DecodeError(e))?;
                 Ok(res)
             }
             Err(err) => {
-                let e = <C::Err as MsgSerde>::from_zbyte(err.payload())?;
-                Err(ZrpcError::ServerError(e))
+                let wrapper = C::ErrSerde::from_zbyte(err.payload())
+                    .map_err(|e| ZrpcError::DecodeError(e))?;
+                let zrpc_server_error = C::unwrap(wrapper);
+                let err = match zrpc_server_error {
+                    super::ZrpcServerError::AppError(app_err) => {
+                        ZrpcError::AppError(app_err)
+                    }
+                    super::ZrpcServerError::SystemError(zrpc_system_error) => {
+                        ZrpcError::ServerSystemError(zrpc_system_error)
+                    }
+                };
+                Err(err)
             }
         }
     }

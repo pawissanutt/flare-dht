@@ -1,7 +1,7 @@
-use flare_zrpc::{
-    BincodeMsgSerde, ZrpcClient, ZrpcError, ZrpcServerError, ZrpcService,
-    ZrpcServiceHander, ZrpcTypeConfig,
-};
+use flare_zrpc::bincode::BincodeZrpcType;
+use flare_zrpc::ZrpcClient;
+use flare_zrpc::ZrpcError;
+use flare_zrpc::{ZrpcService, ZrpcServiceHander};
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 struct InputMsg(i64);
@@ -13,15 +13,10 @@ struct OutputMsg(u64);
 struct MyError(String);
 
 struct TestHandler;
+type TypeConf = BincodeZrpcType<InputMsg, OutputMsg, MyError>;
 
 #[async_trait::async_trait]
-impl ZrpcServiceHander for TestHandler {
-    type In = InputMsg;
-
-    type Out = OutputMsg;
-
-    type Err = MyError;
-
+impl ZrpcServiceHander<TypeConf> for TestHandler {
     async fn handle(&self, req: InputMsg) -> Result<OutputMsg, MyError> {
         info!("receive {:?}", req);
         let num = req.0;
@@ -31,17 +26,6 @@ impl ZrpcServiceHander for TestHandler {
             Err(MyError("num should be more than 0".into()))
         }
     }
-}
-
-struct TypeConf;
-impl ZrpcTypeConfig for TypeConf {
-    type In = BincodeMsgSerde<InputMsg>;
-
-    type Out = BincodeMsgSerde<OutputMsg>;
-
-    type Err = BincodeMsgSerde<ZrpcServerError<MyError>>;
-
-    type ErrInner = MyError;
 }
 
 type TestService = ZrpcService<TestHandler, TypeConf>;
@@ -79,7 +63,7 @@ async fn test() {
         .await
         .expect_err("return should be error");
     info!("return err = {:?}", out);
-    if let ZrpcError::ServerError(_) = out {
+    if let ZrpcError::AppError(_) = out {
     } else {
         panic!("expect error")
     }

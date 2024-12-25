@@ -8,12 +8,17 @@ repository.workspace = true
 license.workspace = true
 rust-version.workspace = true
 
+[features]
+default = ["bincode"]
+bincode = ["dep:bincode"]
+prost = ["dep:prost"]
+
 [dependencies]
 async-trait = {workspace = true}
 zenoh = {workspace = true}
 zenoh-config = {workspace = true}
 serde = {workspace = true}
-bincode = {workspace = true}
+bincode = {workspace = true, optional = true}
 tokio = {workspace = true}
 tokio-util ={ workspace = true}
 thiserror = {workspace = true}
@@ -21,6 +26,7 @@ tracing = {workspace = true}
 bytes ={workspace = true}
 flume ={workspace = true}
 anyerror ={ version = "0.1"}
+prost = { workspace = true, optional = true}
 
 [dev-dependencies]
 anyhow = "1"

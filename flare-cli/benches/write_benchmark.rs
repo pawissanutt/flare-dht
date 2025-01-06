@@ -44,7 +44,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 .metadata_manager
                 .create_collection(CreateCollectionRequest {
                     name: "benches".into(),
-                    shard_count: 16,
+                    partition_count: 16,
                     shard_assignments: vec![],
                     ..Default::default()
                 })

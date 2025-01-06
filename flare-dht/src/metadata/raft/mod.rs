@@ -1,7 +1,4 @@
-// mod network;
-mod rpc;
 mod state_machine;
-mod store;
 #[cfg(test)]
 mod test;
 
@@ -12,7 +9,6 @@ use openraft::{BasicNode, ChangeMembers, Config};
 use state_machine::FlareMetadataSM;
 use std::collections::HashMap;
 use std::str::FromStr;
-use store::StateMachineStore;
 use tokio_stream::StreamExt;
 use tonic::transport::Channel;
 use tracing::info;
@@ -22,7 +18,9 @@ use crate::proto::{
     ClusterMetadata, ClusterMetadataRequest, CreateCollectionRequest,
     CreateCollectionResponse, JoinRequest, JoinResponse, LeaveRequest,
 };
+use crate::raft::generic::LocalStateMachineStore;
 use crate::raft::log::MemLogStore;
+use crate::raft::rpc::{Network, RaftZrpcService};
 use crate::NodeId;
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
@@ -65,11 +63,12 @@ pub struct FlareMetadataManager {
     pub data_pool: Arc<DataPool>,
     pub node_id: NodeId,
     pub(crate) raft: FlareMetaRaft,
-    pub(crate) state_machine: Arc<StateMachineStore<FlareMetadataSM>>,
+    pub(crate) state_machine:
+        LocalStateMachineStore<FlareMetadataSM, MetaTypeConfig>,
     raft_config: Arc<Config>,
     flare_config: ServerArgs,
     log_store: MemLogStore<MetaTypeConfig>,
-    rpc_service: rpc::RaftZrpcService<MetaTypeConfig>,
+    rpc_service: RaftZrpcService<MetaTypeConfig>,
     node_addr: String,
 }
 
@@ -95,12 +94,11 @@ impl FlareMetadataManager {
         info!("use raft {:?}", config);
         let config = Arc::new(config.validate().unwrap());
         let log_store = MemLogStore::default();
-        let sm: StateMachineStore<FlareMetadataSM> =
-            store::StateMachineStore::default();
-        let sm_arc = Arc::new(sm);
-        let network = rpc::Network::new(z_session.clone(), rpc_prefix.into());
+        let store: LocalStateMachineStore<FlareMetadataSM, MetaTypeConfig> =
+            LocalStateMachineStore::default();
+        let network = Network::new(z_session.clone(), rpc_prefix.into());
         let resolver = RaftAddrResolver {
-            state_machine: sm_arc.clone(),
+            state_machine: store.clone(),
         };
         let resolver = Arc::new(resolver);
         // let client_pool = Arc::new(ClientPool::new(resolver.clone()));
@@ -113,11 +111,11 @@ impl FlareMetadataManager {
             config.clone(),
             network,
             log_store.clone(),
-            sm_arc.clone(),
+            store.clone(),
         )
         .await
         .unwrap();
-        let rpc_service = rpc::RaftZrpcService::new(
+        let rpc_service = RaftZrpcService::new(
             raft.clone(),
             z_session,
             rpc_prefix.into(),
@@ -126,7 +124,7 @@ impl FlareMetadataManager {
 
         FlareMetadataManager {
             raft,
-            state_machine: sm_arc,
+            state_machine: store,
             node_id,
             raft_config: config,
             flare_config: server_args,
@@ -379,6 +377,7 @@ impl MetadataManager for FlareMetadataManager {
                     name: col.name.clone(),
                     shard_ids: col.shard_ids.clone(),
                     replication: col.replication as u32,
+                    options: HashMap::new(),
                 },
             );
         }
@@ -411,9 +410,9 @@ impl MetadataManager for FlareMetadataManager {
         &self,
         mut request: CreateCollectionRequest,
     ) -> Result<CreateCollectionResponse, FlareError> {
-        if request.shard_count == 0 {
+        if request.partition_count == 0 {
             return Err(FlareError::InvalidArgument(
-                "shard count must be positive".into(),
+                "partition count must be positive".into(),
             ));
         }
         if !self.is_leader().await {
@@ -423,17 +422,17 @@ impl MetadataManager for FlareMetadataManager {
                 client.create_collection(request).await?;
             return Ok(resp.into_inner());
         }
-        if request.shard_assignments.len() != request.shard_count as usize {
+        if request.shard_assignments.len() != request.partition_count as usize {
             let sm = self.state_machine.state_machine.read().await;
             let members = sm
                 .last_membership
                 .nodes()
                 .map(|pair| *pair.0)
                 .collect::<Vec<u64>>();
-            let shard_count = request.shard_count;
+            let partition_count = request.partition_count;
             let replica_count = request.replica_count;
-            let mut assignments = Vec::with_capacity(shard_count as usize);
-            for shard_id in 0..shard_count {
+            let mut assignments = Vec::new();
+            for shard_id in 0..partition_count {
                 let primary_index = shard_id as usize % members.len();
                 let mut replicas = Vec::with_capacity(replica_count as usize);
 
@@ -444,7 +443,8 @@ impl MetadataManager for FlareMetadataManager {
                 }
 
                 assignments.push(ShardAssignment {
-                    primary: members[primary_index],
+                    primary: Some(members[primary_index]),
+                    shard_ids: vec![],
                     replica: replicas,
                 });
             }
@@ -506,7 +506,7 @@ pub fn test_resolve_shard2() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub struct RaftAddrResolver {
-    state_machine: Arc<StateMachineStore<FlareMetadataSM>>,
+    state_machine: LocalStateMachineStore<FlareMetadataSM, MetaTypeConfig>,
 }
 
 #[async_trait::async_trait]

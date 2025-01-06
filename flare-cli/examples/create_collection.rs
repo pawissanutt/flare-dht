@@ -3,7 +3,7 @@ use flare_dht::proto::{CreateCollectionRequest, SetRequest, SingleKeyRequest};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let shard_count = std::env::args()
+    let partition_count = std::env::args()
         .nth(1)
         .unwrap_or("1".into())
         .parse::<i32>()
@@ -17,7 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let req = tonic::Request::new(CreateCollectionRequest {
         name: col_name.clone(),
-        shard_count: shard_count,
+        partition_count,
         ..Default::default()
     });
     print!("CREATE COLLECTION: {:?}\n", req);

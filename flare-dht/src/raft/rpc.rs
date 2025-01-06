@@ -3,7 +3,7 @@ use std::error::Error;
 use anyerror::AnyError;
 use flare_zrpc::{
     bincode::BincodeZrpcType, ZrpcClient, ZrpcError, ZrpcServerError,
-    ZrpcServiceHander,
+    ZrpcService, ZrpcServiceHander,
 };
 use openraft::{
     error::{
@@ -87,14 +87,15 @@ impl<C: RaftTypeConfig> ZrpcServiceHander<InstallSnapshotType<C>>
 
 #[allow(type_alias_bounds)]
 pub type AppendService<C: RaftTypeConfig> =
-    flare_zrpc::ZrpcService<AppendHandler<C>, AppendType<C>>;
+    ZrpcService<AppendHandler<C>, AppendType<C>>;
 #[allow(type_alias_bounds)]
 pub type VoteService<C: RaftTypeConfig> =
-    flare_zrpc::ZrpcService<VoteHandler<C>, VoteType<C>>;
+    ZrpcService<VoteHandler<C>, VoteType<C>>;
 #[allow(type_alias_bounds)]
 pub type SnapshotService<C: RaftTypeConfig> =
-    flare_zrpc::ZrpcService<InstallSnapshotHandler<C>, InstallSnapshotType<C>>;
+    ZrpcService<InstallSnapshotHandler<C>, InstallSnapshotType<C>>;
 
+#[derive(Clone)]
 pub struct RaftZrpcService<C: RaftTypeConfig> {
     append: AppendService<C>,
     vote: VoteService<C>,
@@ -109,17 +110,17 @@ impl<C: RaftTypeConfig> RaftZrpcService<C> {
         node_id: C::NodeId,
     ) -> Self {
         let append = AppendService::new(
-            format!("{rpc_prefix}/{node_id}/append"),
+            format!("{rpc_prefix}/append/{node_id}"),
             z_session.clone(),
             AppendHandler { raft: raft.clone() },
         );
         let vote = VoteService::new(
-            format!("{rpc_prefix}/{node_id}/vote"),
+            format!("{rpc_prefix}/vote/{node_id}"),
             z_session.clone(),
             VoteHandler { raft: raft.clone() },
         );
         let snapshot = SnapshotService::new(
-            format!("{rpc_prefix}/{node_id}/snapshot"),
+            format!("{rpc_prefix}/snapshot/{node_id}"),
             z_session.clone(),
             InstallSnapshotHandler { raft: raft.clone() },
         );
@@ -259,7 +260,7 @@ impl<C: RaftTypeConfig> RaftNetwork<C> for NetworkConnection<C> {
         AppendEntriesResponse<C::NodeId>,
         RPCError<C::NodeId, C::Node, RaftError<C::NodeId>>,
     > {
-        let res = self.append_client.call(req).await;
+        let res = self.append_client.call(&req).await;
         res.map_err(|e| self.convert(e))
     }
 
@@ -275,7 +276,7 @@ impl<C: RaftTypeConfig> RaftNetwork<C> for NetworkConnection<C> {
             RaftError<C::NodeId, InstallSnapshotError>,
         >,
     > {
-        let res = self.snapshot_client.call(req).await;
+        let res = self.snapshot_client.call(&req).await;
         res.map_err(|e| self.convert(e))
     }
 
@@ -287,7 +288,7 @@ impl<C: RaftTypeConfig> RaftNetwork<C> for NetworkConnection<C> {
         VoteResponse<C::NodeId>,
         RPCError<C::NodeId, C::Node, RaftError<C::NodeId>>,
     > {
-        let res = self.vote_client.call(req).await;
+        let res = self.vote_client.call(&req).await;
         res.map_err(|e| self.convert(e))
     }
 }

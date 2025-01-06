@@ -141,7 +141,7 @@ async fn handle_collection(
                 FlareKvClient::connect(connection.server_url).await?;
             let resp = client
                 .create_collection(Request::new(CreateCollectionRequest {
-                    shard_count: partitions as i32,
+                    partition_count: partitions as i32,
                     name: name,
                     ..Default::default()
                 }))

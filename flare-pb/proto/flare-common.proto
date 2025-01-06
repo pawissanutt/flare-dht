@@ -5,13 +5,16 @@ message CollectionMetadata {
     string name = 1;
     repeated uint64 shard_ids = 2;
     uint32 replication = 3;
+    map<string, string> options = 4;
 }
 
 message ShardMetadata {
     uint64 id  = 1;
     string collection = 2;
-    optional uint64 primary = 3;
-    repeated uint64 replica = 4;
-    string shard_type = 6;
-    map<string, string> options = 7;
+    uint32 partition_id = 3;
+    optional uint64 owner = 4;
+    optional uint64 primary = 5;
+    repeated uint64 replica = 6;
+    string shard_type = 7;
+    map<string, string> options = 8;
 }

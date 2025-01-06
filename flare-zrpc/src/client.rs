@@ -32,13 +32,50 @@ where
 
     pub async fn call(
         &self,
-        payload: C::In,
+        payload: &C::In,
     ) -> Result<C::Out, ZrpcError<C::Err>> {
-        let byte = C::InSerde::to_zbyte(payload)
+        let byte = C::InSerde::to_zbyte(&payload)
             .map_err(|e| ZrpcError::EncodeError(e))?;
         let get_result = self
             .z_session
             .get(self.key_expr.clone())
+            .target(zenoh::query::QueryTarget::BestMatching)
+            .payload(byte)
+            .await?;
+        let reply = get_result.recv_async().await?;
+        match reply.result() {
+            Ok(sample) => {
+                let res = C::OutSerde::from_zbyte(sample.payload())
+                    .map_err(|e| ZrpcError::DecodeError(e))?;
+                Ok(res)
+            }
+            Err(err) => {
+                let wrapper = C::ErrSerde::from_zbyte(err.payload())
+                    .map_err(|e| ZrpcError::DecodeError(e))?;
+                let zrpc_server_error = C::unwrap(wrapper);
+                let err = match zrpc_server_error {
+                    super::ZrpcServerError::AppError(app_err) => {
+                        ZrpcError::AppError(app_err)
+                    }
+                    super::ZrpcServerError::SystemError(zrpc_system_error) => {
+                        ZrpcError::ServerSystemError(zrpc_system_error)
+                    }
+                };
+                Err(err)
+            }
+        }
+    }
+
+    pub async fn call_with_key(
+        &self,
+        key: String,
+        payload: &C::In,
+    ) -> Result<C::Out, ZrpcError<C::Err>> {
+        let byte = C::InSerde::to_zbyte(&payload)
+            .map_err(|e| ZrpcError::EncodeError(e))?;
+        let get_result = self
+            .z_session
+            .get(self.key_expr.join(&key).unwrap())
             .target(zenoh::query::QueryTarget::BestMatching)
             .payload(byte)
             .await?;

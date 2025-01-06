@@ -2,7 +2,7 @@ use std::{error::Error, marker::PhantomData, sync::Arc};
 
 use anyerror::AnyError;
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info, warn};
+use tracing::{debug, error, warn};
 use zenoh::query::Query;
 
 use crate::msg::MsgSerde;
@@ -17,7 +17,7 @@ pub trait ZrpcServiceHander<C: ZrpcTypeConfig> {
     async fn handle(&self, req: C::In) -> Result<C::Out, C::Err>;
 }
 
-#[derive(Clone)]
+// #[derive(Clone)]
 pub struct ZrpcService<T, C>
 where
     C: ZrpcTypeConfig,
@@ -28,6 +28,22 @@ where
     handler: Arc<T>,
     token: tokio_util::sync::CancellationToken,
     _conf: PhantomData<C>,
+}
+
+impl<T, C> Clone for ZrpcService<T, C>
+where
+    C: ZrpcTypeConfig,
+    T: ZrpcServiceHander<C> + Send + Sync + 'static,
+{
+    fn clone(&self) -> Self {
+        Self {
+            service_id: self.service_id.clone(),
+            z_session: self.z_session.clone(),
+            handler: self.handler.clone(),
+            token: self.token.clone(),
+            _conf: self._conf.clone(),
+        }
+    }
 }
 
 impl<T, C> ZrpcService<T, C>
@@ -51,7 +67,7 @@ where
 
     pub async fn start(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
         let service_id = self.service_id.clone();
-        info!("registering rpc on '{}'", service_id);
+        debug!("registering rpc on '{}'", service_id);
         let z_session = self.z_session.clone();
         let handler = self.handler.clone();
         let cloned_token = self.token.clone();
@@ -104,7 +120,7 @@ where
     }
 
     async fn write_output(out: C::Out, query: Query) {
-        match C::OutSerde::to_zbyte(out) {
+        match C::OutSerde::to_zbyte(&out) {
             Ok(byte) => {
                 if let Err(e) = query.reply(query.key_expr(), byte).await {
                     warn!("error on replying '{}', {}", query.key_expr(), e);
@@ -120,8 +136,8 @@ where
 
     async fn write_error(err: ZrpcServerError<C::Err>, query: Query) {
         let wrapper = C::wrap(err);
-        let bytes =
-            C::ErrSerde::to_zbyte(wrapper).expect("Encode error message error");
+        let bytes = C::ErrSerde::to_zbyte(&wrapper)
+            .expect("Encode error message error");
         if let Err(e) = query.reply_err(bytes).await {
             warn!("error on error replying '{}', {}", query.key_expr(), e);
         };

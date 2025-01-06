@@ -50,7 +50,7 @@ async fn test() {
     for i in 1..10 {
         info!("call rpc = {}", i);
         let out = client
-            .call(InputMsg(i))
+            .call(&InputMsg(i))
             .await
             .expect("return should not error");
         info!("return output = {}", out.0);
@@ -59,7 +59,7 @@ async fn test() {
 
     info!("call rpc = -2");
     let out = client
-        .call(InputMsg(-2))
+        .call(&InputMsg(-2))
         .await
         .expect_err("return should be error");
     info!("return err = {:?}", out);

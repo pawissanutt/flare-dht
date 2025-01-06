@@ -9,9 +9,10 @@ license.workspace = true
 rust-version.workspace = true
 
 [features]
-default = ["bincode"]
+default = ["bincode", ]
 bincode = ["dep:bincode"]
 prost = ["dep:prost"]
+bitcode = ["dep:bitcode"]
 
 [dependencies]
 async-trait = {workspace = true}
@@ -27,6 +28,7 @@ bytes ={workspace = true}
 flume ={workspace = true}
 anyerror ={ version = "0.1"}
 prost = { workspace = true, optional = true}
+bitcode = { version = "0.6", optional = true, features = ["serde"]}
 
 [dev-dependencies]
 anyhow = "1"

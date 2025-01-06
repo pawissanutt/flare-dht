@@ -1,8 +1,12 @@
 #[cfg(feature = "bincode")]
 pub mod bincode;
+#[cfg(feature = "bitcode")]
+pub mod bitcode;
 pub mod client;
 mod error;
 mod msg;
+#[cfg(feature = "prost")]
+pub mod prost;
 mod server;
 
 pub use client::ZrpcClient;

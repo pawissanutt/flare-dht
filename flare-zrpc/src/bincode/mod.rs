@@ -55,8 +55,8 @@ where
 {
     type Data = T;
 
-    fn to_zbyte(payload: Self::Data) -> Result<ZBytes, AnyError> {
-        let payload = bincode::serde::encode_to_vec(payload, BINCODE_CONFIG)
+    fn to_zbyte(payload: &Self::Data) -> Result<ZBytes, AnyError> {
+        let payload = bincode::serde::encode_to_vec(&payload, BINCODE_CONFIG)
             .map_err(|e| AnyError::new(&e))?;
         Ok(ZBytes::from(&payload[..]))
     }

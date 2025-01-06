@@ -6,7 +6,7 @@ pub mod error;
 pub mod metadata;
 pub mod pool;
 #[cfg(feature = "raft")]
-mod raft;
+pub mod raft;
 #[cfg(feature = "rpc-server")]
 pub mod rpc_server;
 pub mod shard;

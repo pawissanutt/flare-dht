@@ -203,18 +203,18 @@ impl<C: RaftTypeConfig> NetworkConnection<C> {
         target: C::NodeId,
     ) -> Self {
         let append_client = AppendClient::new(
-            format!("{rpc_prefix}/{target}/append"),
+            format!("{rpc_prefix}/append/{target}"),
             z_session.clone(),
         )
         .await;
         let vote_client = VoteClient::<C>::new(
-            format!("{rpc_prefix}/{target}/vote"),
+            format!("{rpc_prefix}/vote/{target}"),
             z_session.clone(),
         )
         .await;
 
         let snapshot_client = InstallSnapshotClient::new(
-            format!("{rpc_prefix}/{target}/snapshot"),
+            format!("{rpc_prefix}/snapshot/{target}"),
             z_session.clone(),
         )
         .await;

@@ -1,6 +1,6 @@
 [package]
 name = "flare-dht"
-description = "The learning project to create the distributed KV database in Rust language."
+description = "The library to create distributed data management. (Not ready to be used in production.)"
 version.workspace = true
 edition.workspace = true
 repository.workspace = true

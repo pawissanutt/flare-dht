@@ -1,6 +1,6 @@
 [package]
 name = "flare-zrpc"
-description = "Simple rpc library on top of Zenoh and bincode"
+description = "The RPC library on top of Zenoh with support for serialization library of choice."
 authors.workspace = true
 version.workspace = true
 edition.workspace = true

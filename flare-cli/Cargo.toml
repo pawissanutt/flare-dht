@@ -12,7 +12,7 @@ rust-version.workspace = true
 
 [dependencies]
 # flare-pb = {workspace = true}
-flare-dht = {workspace = true, features = ["raft"]}
+flare-dht = {workspace = true, features = ["raft", "rkyv"]}
 flare-zrpc = {workspace = true}
 clap = {version = "4.5", features = ["env"]}
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "net"] }

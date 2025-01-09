@@ -22,6 +22,8 @@ pub enum FlareInternalError {
 pub enum FlareError {
     #[error("No shard `{0}` on current node")]
     NoShardFound(ShardId),
+    #[error("No shard `{0:?}` on current node")]
+    NoShardsFound(Vec<ShardId>),
     #[error("No collection `{0}` in cluster")]
     NoCollection(String),
     #[error("Invalid: {0}")]

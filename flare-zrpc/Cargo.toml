@@ -26,7 +26,7 @@ thiserror = {workspace = true}
 tracing = {workspace = true}
 bytes ={workspace = true}
 flume ={workspace = true}
-anyerror ={ version = "0.1"}
+anyerror = { version = "0.1"}
 prost = { workspace = true, optional = true}
 bitcode = { version = "0.6", optional = true, features = ["serde"]}
 

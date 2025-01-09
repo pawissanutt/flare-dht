@@ -3,7 +3,7 @@ mod state_machine;
 mod test;
 
 use flare_pb::flare_control_client::FlareControlClient;
-use flare_pb::ShardAssignment;
+use flare_pb::{ShardAssignment, ShardGroup};
 use http::Uri;
 use openraft::{BasicNode, ChangeMembers, Config};
 use state_machine::FlareMetadataSM;
@@ -32,7 +32,7 @@ use crate::pool::{
     create_control_pool, create_data_pool, ControlPool, DataPool,
 };
 
-use super::{CollectionMetadata, MetadataManager};
+use super::{CollectionMetadataState, MetadataManager, ShardGroupState};
 use crate::shard::ShardMetadata;
 
 openraft::declare_raft_types!(
@@ -51,7 +51,7 @@ pub enum FlareControlRequest {
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub enum FlareControlResponse {
-    CollectionCreated { meta: CollectionMetadata },
+    CollectionCreated { meta: CollectionMetadataState },
     Rejected(String),
     Empty,
 }
@@ -72,12 +72,15 @@ pub struct FlareMetadataManager {
     node_addr: String,
 }
 
-fn resolve_shard_id(meta: &CollectionMetadata, key: &[u8]) -> Option<u64> {
+fn resolve_shard_id<'a>(
+    meta: &'a CollectionMetadataState,
+    key: &[u8],
+) -> &'a ShardGroupState {
     let hashed = mur3::murmurhash3_x86_32(key, meta.seed) as u32;
-    let shard_count = meta.shard_ids.len();
+    let shard_count = meta.shards.len();
     let size = u32::div_ceil(u32::MAX, shard_count as u32);
     let shard_index = hashed / size;
-    Some(meta.shard_ids[shard_index as usize])
+    return &meta.shards[shard_index as usize];
 }
 
 impl FlareMetadataManager {
@@ -215,22 +218,29 @@ impl MetadataManager for FlareMetadataManager {
         Ok(())
     }
 
-    async fn get_shard_ids(&self, col_name: &str) -> Option<Vec<u64>> {
+    async fn get_shard_ids(
+        &self,
+        col_name: &str,
+    ) -> Option<Vec<ShardGroupState>> {
         let state_machine = self.state_machine.clone();
         let col_meta_state = state_machine.state_machine.read().await;
         let col = col_meta_state
             .app_data
             .collections
             .get(col_name)
-            .map(|col| col.shard_ids.clone());
+            .map(|col| col.shards.clone());
         col
     }
 
-    async fn get_shard_id(&self, col_name: &str, key: &[u8]) -> Option<u64> {
+    async fn get_shard_id(
+        &self,
+        col_name: &str,
+        key: &[u8],
+    ) -> Option<ShardGroupState> {
         let col_meta_state = self.state_machine.state_machine.read().await;
         let col = col_meta_state.app_data.collections.get(col_name);
         if let Some(meta) = col {
-            resolve_shard_id(meta, key)
+            Some(resolve_shard_id(meta, key).clone())
         } else {
             None
         }
@@ -371,11 +381,18 @@ impl MetadataManager for FlareMetadataManager {
         let collection_sm = &metadata_sm.collections;
         let mut collections = HashMap::with_capacity(collection_sm.len());
         for (name, col) in collection_sm.iter() {
+            let shard_groups = col
+                .shards
+                .iter()
+                .map(|s| ShardGroup {
+                    shard_ids: s.shard_ids.clone(),
+                })
+                .collect();
             collections.insert(
                 name.clone(),
                 flare_pb::CollectionMetadata {
                     name: col.name.clone(),
-                    shard_ids: col.shard_ids.clone(),
+                    shards: shard_groups,
                     replication: col.replication as u32,
                     options: HashMap::new(),
                 },
@@ -489,18 +506,19 @@ impl MetadataManager for FlareMetadataManager {
 }
 
 #[test]
-pub fn test_resolve_shard2() -> Result<(), Box<dyn std::error::Error>> {
-    let shard_count = 256;
-    let meta = CollectionMetadata {
+pub fn test_resolve_shard() -> Result<(), Box<dyn std::error::Error>> {
+    let partition_count = 256;
+    let meta = CollectionMetadataState {
         name: "test".into(),
-        shard_ids: (0..shard_count).collect(),
+        shards: (0..partition_count)
+            .map(|i| ShardGroupState { shard_ids: vec![i] })
+            .collect(),
         replication: 1,
         seed: rand::random(),
     };
     for i in 0..1000000 {
         let option = resolve_shard_id(&meta, format!("test-{}", i).as_bytes());
-        assert_ne!(option, None);
-        assert!(option.unwrap() < shard_count)
+        assert!(option.shard_ids.len() > 0);
     }
     Ok(())
 }

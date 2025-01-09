@@ -108,7 +108,7 @@ where
     ) -> Result<Arc<T>, FlareError> {
         let option = self.metadata_manager.get_shard_id(collection, key).await;
         if let Some(shard_id) = option {
-            self.shard_manager.get_shard(shard_id)
+            self.shard_manager.get_any_shard(&shard_id.shard_ids)
         } else {
             Err(FlareError::NoCollection(collection.into()))
         }

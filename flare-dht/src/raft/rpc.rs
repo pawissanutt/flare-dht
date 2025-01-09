@@ -110,17 +110,17 @@ impl<C: RaftTypeConfig> RaftZrpcService<C> {
         node_id: C::NodeId,
     ) -> Self {
         let append = AppendService::new(
-            format!("{rpc_prefix}/append/{node_id}"),
+            format!("{rpc_prefix}/raft-append/{node_id}"),
             z_session.clone(),
             AppendHandler { raft: raft.clone() },
         );
         let vote = VoteService::new(
-            format!("{rpc_prefix}/vote/{node_id}"),
+            format!("{rpc_prefix}/raft-vote/{node_id}"),
             z_session.clone(),
             VoteHandler { raft: raft.clone() },
         );
         let snapshot = SnapshotService::new(
-            format!("{rpc_prefix}/snapshot/{node_id}"),
+            format!("{rpc_prefix}/raft-snapshot/{node_id}"),
             z_session.clone(),
             InstallSnapshotHandler { raft: raft.clone() },
         );
@@ -203,18 +203,18 @@ impl<C: RaftTypeConfig> NetworkConnection<C> {
         target: C::NodeId,
     ) -> Self {
         let append_client = AppendClient::new(
-            format!("{rpc_prefix}/append/{target}"),
+            format!("{rpc_prefix}/raft-append/{target}"),
             z_session.clone(),
         )
         .await;
         let vote_client = VoteClient::<C>::new(
-            format!("{rpc_prefix}/vote/{target}"),
+            format!("{rpc_prefix}/raft-vote/{target}"),
             z_session.clone(),
         )
         .await;
 
         let snapshot_client = InstallSnapshotClient::new(
-            format!("{rpc_prefix}/snapshot/{target}"),
+            format!("{rpc_prefix}/raft-snapshot/{target}"),
             z_session.clone(),
         )
         .await;

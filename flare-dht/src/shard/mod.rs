@@ -12,10 +12,12 @@ use scc::HashMap;
 
 pub type ShardId = u64;
 
-#[derive(
-    rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Debug, Default, Clone,
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize),
+    rkyv(derive(Debug))
 )]
-#[rkyv(derive(Debug))]
+#[derive(Debug, Default, Clone)]
 pub struct ShardMetadata {
     pub id: u64,
     pub collection: String,
@@ -55,6 +57,11 @@ pub trait KvShard: Send + Sync {
 
     async fn close(&self) -> Result<(), FlareError> {
         Ok(())
+    }
+
+    fn watch_readiness(&self) -> tokio::sync::watch::Receiver<bool> {
+        let (_, rx) = tokio::sync::watch::channel(true);
+        rx
     }
 
     async fn get(
@@ -188,6 +195,21 @@ where
     }
 
     #[inline]
+    pub fn get_any_shard(
+        &self,
+        shard_ids: &Vec<ShardId>,
+    ) -> Result<Arc<dyn KvShard<Key = K, Entry = V>>, FlareError> {
+        for id in shard_ids.iter() {
+            if let Some(shard) =
+                self.shards.get(id).map(|shard| shard.get().to_owned())
+            {
+                return Ok(shard);
+            }
+        }
+        Err(FlareError::NoShardsFound(shard_ids.clone()))
+    }
+
+    #[inline]
     pub async fn create_shard(&self, shard_metadata: ShardMetadata) {
         let shard = self.shard_factory.create_shard(shard_metadata).await;
         let shard_id = shard.meta().id;
@@ -212,6 +234,14 @@ where
     pub async fn remove_shard(&self, shard_id: ShardId) {
         if let Some((_, v)) = self.shards.remove(&shard_id) {
             let _ = v.close().await;
+        }
+    }
+
+    pub async fn close(&self) {
+        let mut iter = self.shards.first_entry_async().await;
+        while let Some(entry) = iter {
+            entry.close().await.expect("close shard failed");
+            iter = entry.next_async().await;
         }
     }
 }

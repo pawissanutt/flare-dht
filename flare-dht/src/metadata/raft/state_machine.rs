@@ -1,5 +1,6 @@
 use crate::{
-    metadata::CollectionMetadata, raft::generic::AppStateMachine,
+    metadata::{CollectionMetadataState, ShardGroupState},
+    raft::generic::AppStateMachine,
     shard::ShardMetadata,
 };
 
@@ -10,12 +11,14 @@ use std::collections::BTreeMap;
 
 use super::{FlareControlRequest, FlareControlResponse};
 
-#[derive(
-    rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Debug, Default, Clone,
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize),
+    rkyv(derive(Debug))
 )]
-#[rkyv(derive(Debug))]
+#[derive(Debug, Default, Clone)]
 pub struct FlareMetadataSM {
-    pub collections: BTreeMap<String, CollectionMetadata>,
+    pub collections: BTreeMap<String, CollectionMetadataState>,
     pub shards: BTreeMap<u64, ShardMetadata>,
     pub last_shard_id: u64,
 }
@@ -64,6 +67,7 @@ impl FlareMetadataSM {
         // let shards = Vec::with_capacity(shard_count as usize);
         let mut shard_ids =
             Vec::with_capacity((partition_count * req.replica_count) as usize);
+        let mut shard_groups = Vec::with_capacity(partition_count as usize);
         for i in 0..partition_count {
             let assignment = &req.shard_assignments[i as usize];
             let mut replica_shard_ids = assignment.shard_ids.clone();
@@ -86,12 +90,15 @@ impl FlareMetadataSM {
                 shard_ids.push(*shard_id);
                 self.shards.insert(*shard_id, shard_meta);
             }
+            shard_groups.push(ShardGroupState {
+                shard_ids: replica_shard_ids,
+            });
         }
         self.last_shard_id += partition_count as u64;
 
-        let col_meta = CollectionMetadata {
+        let col_meta = CollectionMetadataState {
             name: name.into(),
-            shard_ids: shard_ids,
+            shards: shard_groups,
             replication: req.replica_count as u8,
             ..Default::default()
         };

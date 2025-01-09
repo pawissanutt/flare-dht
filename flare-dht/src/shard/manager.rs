@@ -34,6 +34,21 @@ where
     }
 
     #[inline]
+    pub fn get_any_shard(
+        &self,
+        shard_ids: &Vec<ShardId>,
+    ) -> Result<Arc<T>, FlareError> {
+        for id in shard_ids.iter() {
+            if let Some(shard) =
+                self.shards.get(id).map(|shard| shard.get().to_owned())
+            {
+                return Ok(shard);
+            }
+        }
+        Err(FlareError::NoShardsFound(shard_ids.clone()))
+    }
+
+    #[inline]
     pub fn create_shard(&self, shard_metadata: ShardMetadata) {
         let shard = self.shard_factory.create_shard(shard_metadata);
         let shard_id = shard.meta().id;

@@ -3,9 +3,13 @@ package flare;
   
 message CollectionMetadata {
     string name = 1;
-    repeated uint64 shard_ids = 2;
+    repeated ShardGroup shards = 2;
     uint32 replication = 3;
     map<string, string> options = 4;
+}
+
+message ShardGroup {
+    repeated uint64 shard_ids = 1;
 }
 
 message ShardMetadata {

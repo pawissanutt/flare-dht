@@ -1,5 +1,6 @@
-#[cfg(feature = "raft")]
+#[cfg(all(feature = "raft", feature = "rkyv"))]
 pub mod raft;
+
 use crate::error::FlareError;
 use crate::proto::{
     ClusterMetadata, CreateCollectionRequest, CreateCollectionResponse,
@@ -12,8 +13,15 @@ use std::u32;
 #[async_trait::async_trait]
 pub trait MetadataManager: Send + Sync {
     async fn initialize(&self) -> Result<(), FlareError>;
-    async fn get_shard_ids(&self, col_name: &str) -> Option<Vec<u64>>;
-    async fn get_shard_id(&self, col_name: &str, key: &[u8]) -> Option<u64>;
+    async fn get_shard_ids(
+        &self,
+        col_name: &str,
+    ) -> Option<Vec<ShardGroupState>>;
+    async fn get_shard_id(
+        &self,
+        col_name: &str,
+        key: &[u8],
+    ) -> Option<ShardGroupState>;
     async fn leave(&self);
     async fn other_leave(&self, node_id: NodeId) -> Result<(), FlareError>;
     async fn other_join(
@@ -31,20 +39,25 @@ pub trait MetadataManager: Send + Sync {
     fn create_watch(&self) -> tokio::sync::watch::Receiver<u64>;
 }
 
-#[derive(
-    rkyv::Archive,
-    rkyv::Serialize,
-    rkyv::Deserialize,
-    serde::Serialize,
-    serde::Deserialize,
-    Debug,
-    Default,
-    Clone,
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize),
+    rkyv(compare(PartialEq), derive(Debug))
 )]
-#[rkyv(compare(PartialEq), derive(Debug))]
-pub struct CollectionMetadata {
+#[derive(serde::Serialize, serde::Deserialize, Debug, Default, Clone)]
+pub struct CollectionMetadataState {
     pub name: String,
-    pub shard_ids: Vec<u64>,
+    pub shards: Vec<ShardGroupState>,
     pub seed: u32,
     pub replication: u8,
+}
+
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize),
+    rkyv(compare(PartialEq), derive(Debug))
+)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Default, Clone)]
+pub struct ShardGroupState {
+    pub shard_ids: Vec<u64>,
 }

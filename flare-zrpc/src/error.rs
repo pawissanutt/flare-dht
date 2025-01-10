@@ -7,8 +7,6 @@ pub enum Infallible {}
 
 #[derive(thiserror::Error, Debug)]
 pub enum ZrpcError<E = Infallible> {
-    // #[error("reply error: {0}")]
-    // ReplyError(#[from] ReplyError),
     #[error("connection error: {0}")]
     ConnectionError(#[from] Box<dyn Error + Send + Sync>),
     #[error("encode error: {0}")]

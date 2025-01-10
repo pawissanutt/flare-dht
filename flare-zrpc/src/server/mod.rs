@@ -122,7 +122,8 @@ where
     async fn write_output(out: C::Out, query: Query) {
         match C::OutSerde::to_zbyte(&out) {
             Ok(byte) => {
-                if let Err(e) = query.reply(query.key_expr(), byte).await {
+                let reply_key = query.key_expr();
+                if let Err(e) = query.reply(reply_key, byte).await {
                     warn!("error on replying '{}', {}", query.key_expr(), e);
                 }
             }

@@ -60,6 +60,7 @@ where
         self.shards.contains(&shard_id)
     }
 
+    #[inline]
     pub fn sync_shards(&self, shard_meta: &Vec<ShardMetadata>) {
         for s in shard_meta {
             if self.contains(s.id) {

@@ -20,8 +20,8 @@ where
     pub metadata_manager: Arc<dyn MetadataManager>,
     pub addr: String,
     pub node_id: NodeId,
-    pub control_pool: Arc<ControlPool>,
-    pub data_pool: Arc<DataPool>,
+    // pub control_pool: Arc<ControlPool>,
+    // pub data_pool: Arc<DataPool>,
     pub shard_manager: Arc<ShardManager<T>>,
     close_signal_sender: tokio::sync::watch::Sender<bool>,
     close_signal_receiver: tokio::sync::watch::Receiver<bool>,
@@ -36,8 +36,8 @@ where
         node_id: NodeId,
         metadata_manager: Arc<dyn MetadataManager>,
         shard_manager: Arc<ShardManager<T>>,
-        control_pool: Arc<ControlPool>,
-        data_pool: Arc<DataPool>,
+        // control_pool: Arc<ControlPool>,
+        // data_pool: Arc<DataPool>,
     ) -> Self {
         let (tx, rx) = tokio::sync::watch::channel(false);
         FlareNode {
@@ -45,8 +45,8 @@ where
             addr,
             node_id,
             shard_manager: shard_manager,
-            control_pool,
-            data_pool,
+            // control_pool,
+            // data_pool,
             close_signal_sender: tx,
             close_signal_receiver: rx,
         }

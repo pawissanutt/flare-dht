@@ -47,8 +47,8 @@ pub async fn start_server(
         node_id,
         metadata_manager.clone(),
         shard_manager,
-        metadata_manager.control_pool.clone(),
-        metadata_manager.data_pool.clone(),
+        // metadata_manager.control_pool.clone(),
+        // metadata_manager.data_pool.clone(),
     )
     .await;
 

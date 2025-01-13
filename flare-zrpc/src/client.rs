@@ -1,4 +1,6 @@
-use zenoh::key_expr::KeyExpr;
+use zenoh::{
+    key_expr::KeyExpr, query::ConsolidationMode, sample::Locality::Remote,
+};
 
 use crate::{msg::MsgSerde, ZrpcError};
 use std::marker::PhantomData;
@@ -40,6 +42,8 @@ where
             .z_session
             .get(self.key_expr.clone())
             .payload(byte)
+            .target(zenoh::query::QueryTarget::All)
+            .consolidation(ConsolidationMode::None)
             .await?;
         let reply = get_result.recv_async().await?;
         match reply.result() {
@@ -76,6 +80,8 @@ where
             .z_session
             .get(self.key_expr.join(&key).unwrap())
             .payload(byte)
+            .target(zenoh::query::QueryTarget::All)
+            .consolidation(ConsolidationMode::None)
             .await?;
         let reply = get_result.recv_async().await?;
         match reply.result() {

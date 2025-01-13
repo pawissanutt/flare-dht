@@ -1046,7 +1046,7 @@ checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 
 [[package]]
 name = "flare-cli"
-version = "0.1.15"
+version = "0.1.17"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1068,7 +1068,7 @@ dependencies = [
 
 [[package]]
 name = "flare-dht"
-version = "0.1.15"
+version = "0.1.17"
 dependencies = [
  "anyerror",
  "async-trait",
@@ -1099,7 +1099,7 @@ dependencies = [
 
 [[package]]
 name = "flare-pb"
-version = "0.1.15"
+version = "0.1.17"
 dependencies = [
  "prost",
  "prost-types",
@@ -1110,7 +1110,7 @@ dependencies = [
 
 [[package]]
 name = "flare-zrpc"
-version = "0.1.15"
+version = "0.1.17"
 dependencies = [
  "anyerror",
  "anyhow",

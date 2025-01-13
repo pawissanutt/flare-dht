@@ -2,12 +2,13 @@ use std::error::Error;
 
 use anyerror::AnyError;
 use flare_zrpc::{
-    bincode::BincodeZrpcType, ZrpcClient, ZrpcError, ZrpcServerError,
-    ZrpcService, ZrpcServiceHander,
+    bincode::BincodeZrpcType, ZrpcClient, ZrpcError, ZrpcService,
+    ZrpcServiceHander,
 };
 use openraft::{
     error::{
         InstallSnapshotError, NetworkError, RPCError, RaftError, RemoteError,
+        Unreachable,
     },
     network::RPCOption,
     raft::{
@@ -231,20 +232,11 @@ impl<C: RaftTypeConfig> NetworkConnection<C> {
         error: ZrpcError<E>,
     ) -> RPCError<C::NodeId, C::Node, E> {
         match error {
-            ZrpcError::ServerError(zrpc_server_error) => {
-                self.convert_server(zrpc_server_error)
-            }
-            err => RPCError::Network(NetworkError::from(AnyError::new(&err))),
-        }
-    }
-
-    fn convert_server<E: Error + 'static>(
-        &self,
-        error: ZrpcServerError<E>,
-    ) -> RPCError<C::NodeId, C::Node, E> {
-        match error {
-            ZrpcServerError::AppError(app_err) => RPCError::RemoteError(
+            ZrpcError::AppError(app_err) => RPCError::RemoteError(
                 RemoteError::new(self.target.to_owned(), app_err),
+            ),
+            ZrpcError::ConnectionError(err) => RPCError::Unreachable(
+                Unreachable::from(AnyError::error(err.to_string())),
             ),
             err => RPCError::Network(NetworkError::from(AnyError::new(&err))),
         }

@@ -14,8 +14,6 @@ pub enum ZrpcError<E = Infallible> {
     #[error("decode error: {0}")]
     DecodeError(AnyError),
     #[error("server error: {0}")]
-    ServerError(ZrpcServerError<E>),
-    #[error("server error: {0}")]
     ServerSystemError(ZrpcSystemError),
     #[error("app error: {0}")]
     AppError(E),

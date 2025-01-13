@@ -1,6 +1,5 @@
 use crate::error::FlareError;
 use crate::metadata::MetadataManager;
-use crate::pool::{ControlPool, DataPool};
 use crate::shard::{KvShard, ShardManager};
 use crate::NodeId;
 use flare_pb::flare_control_client::FlareControlClient;

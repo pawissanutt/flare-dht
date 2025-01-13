@@ -36,10 +36,6 @@ where
     ) -> Result<C::Out, ZrpcError<C::Err>> {
         let byte = C::InSerde::to_zbyte(&payload)
             .map_err(|e| ZrpcError::EncodeError(e))?;
-        let q = self
-            .z_session
-            .declare_querier(self.key_expr.clone())
-            .await?;
         let get_result = self
             .z_session
             .get(self.key_expr.clone())

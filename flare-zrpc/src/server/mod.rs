@@ -1,3 +1,4 @@
+pub mod concurrent;
 use std::{error::Error, marker::PhantomData, sync::Arc};
 
 use anyerror::AnyError;
@@ -144,6 +145,7 @@ where
         };
     }
 
+    #[inline]
     pub fn close(&self) {
         self.token.cancel();
     }

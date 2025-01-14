@@ -1,6 +1,4 @@
-use zenoh::{
-    key_expr::KeyExpr, query::ConsolidationMode, sample::Locality::Remote,
-};
+use zenoh::{key_expr::KeyExpr, query::ConsolidationMode};
 
 use crate::{msg::MsgSerde, ZrpcError};
 use std::marker::PhantomData;

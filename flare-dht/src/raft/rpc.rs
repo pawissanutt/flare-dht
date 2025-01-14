@@ -2,8 +2,9 @@ use std::error::Error;
 
 use anyerror::AnyError;
 use flare_zrpc::{
-    bincode::BincodeZrpcType, ZrpcClient, ZrpcError, ZrpcService,
-    ZrpcServiceHander,
+    bincode::BincodeZrpcType,
+    server::concurrent::{ServerConfig, ZrpcService},
+    ZrpcClient, ZrpcError, ZrpcServiceHander,
 };
 use openraft::{
     error::{
@@ -110,19 +111,31 @@ impl<C: RaftTypeConfig> RaftZrpcService<C> {
         rpc_prefix: String,
         node_id: C::NodeId,
     ) -> Self {
+        let conf = ServerConfig {
+            service_id: format!("{rpc_prefix}/raft-append/{node_id}"),
+            ..Default::default()
+        };
         let append = AppendService::new(
-            format!("{rpc_prefix}/raft-append/{node_id}"),
             z_session.clone(),
+            conf,
             AppendHandler { raft: raft.clone() },
         );
+        let conf = ServerConfig {
+            service_id: format!("{rpc_prefix}/raft-vote/{node_id}"),
+            ..Default::default()
+        };
         let vote = VoteService::new(
-            format!("{rpc_prefix}/raft-vote/{node_id}"),
             z_session.clone(),
+            conf,
             VoteHandler { raft: raft.clone() },
         );
+        let conf = ServerConfig {
+            service_id: format!("{rpc_prefix}/raft-snapshot/{node_id}"),
+            ..Default::default()
+        };
         let snapshot = SnapshotService::new(
-            format!("{rpc_prefix}/raft-snapshot/{node_id}"),
             z_session.clone(),
+            conf,
             InstallSnapshotHandler { raft: raft.clone() },
         );
 

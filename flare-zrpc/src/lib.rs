@@ -7,7 +7,7 @@ mod error;
 mod msg;
 #[cfg(feature = "prost")]
 pub mod prost;
-mod server;
+pub mod server;
 
 pub use client::ZrpcClient;
 pub use error::ZrpcError;

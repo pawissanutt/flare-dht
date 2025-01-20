@@ -29,10 +29,12 @@ where
     type OutSerde = BincodeMsgSerde<O>;
     type ErrSerde = BincodeMsgSerde<Self::Wrapper>;
 
+    #[inline]
     fn wrap(output: ZrpcServerError<Self::Err>) -> Self::Wrapper {
         output
     }
 
+    #[inline]
     fn unwrap(wrapper: Self::Wrapper) -> ZrpcServerError<Self::Err> {
         wrapper
     }
@@ -55,12 +57,14 @@ where
 {
     type Data = T;
 
+    #[inline]
     fn to_zbyte(payload: &Self::Data) -> Result<ZBytes, AnyError> {
         let payload = bincode::serde::encode_to_vec(&payload, BINCODE_CONFIG)
             .map_err(|e| AnyError::new(&e))?;
         Ok(ZBytes::from(&payload[..]))
     }
 
+    #[inline]
     fn from_zbyte(payload: &ZBytes) -> Result<Self::Data, AnyError> {
         let resp = bincode::serde::decode_from_slice(
             &payload.to_bytes(),

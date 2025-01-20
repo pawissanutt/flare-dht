@@ -42,6 +42,7 @@ where
             .payload(byte)
             .target(zenoh::query::QueryTarget::All)
             .consolidation(ConsolidationMode::None)
+            .congestion_control(zenoh::qos::CongestionControl::Block)
             .await?;
         let reply = get_result.recv_async().await?;
         match reply.result() {
@@ -80,6 +81,7 @@ where
             .payload(byte)
             .target(zenoh::query::QueryTarget::All)
             .consolidation(ConsolidationMode::None)
+            .congestion_control(zenoh::qos::CongestionControl::Block)
             .await?;
         let reply = get_result.recv_async().await?;
         match reply.result() {

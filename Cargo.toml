@@ -9,7 +9,7 @@ members = [
 
 [workspace.package]
 authors = ["Pawissanutt Lertpongrujikorn <pawissanutt@gmail.com>"]
-version = "0.1.18"
+version = "0.1.19"
 edition = "2021"
 repository = "https://github.com/pawissanutt/flare-dht"
 license = "Apache-2.0"
@@ -17,10 +17,10 @@ rust-version = "1.81"
 
 
 [workspace.dependencies]
-flare-dht = {version = "0.1.18", path = "flare-dht"}
-flare-pb = {version = "0.1.18", path = "flare-pb"}
-flare-zrpc = {version = "0.1.18", path = "flare-zrpc"}
-flare-cli = {version = "0.1.18", path = "flare-cli"}
+flare-dht = {version = "0.1.19", path = "flare-dht"}
+flare-pb = {version = "0.1.19", path = "flare-pb"}
+flare-zrpc = {version = "0.1.19", path = "flare-zrpc"}
+flare-cli = {version = "0.1.19", path = "flare-cli"}
 async-trait = {version = "0.1"}
 bincode = {version = "2.0.0-rc.3", features = ["serde"]}
 bytes ={ version = "1", features = ["serde"]}

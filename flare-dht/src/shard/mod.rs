@@ -26,6 +26,7 @@ pub struct ShardMetadata {
     pub owner: Option<u64>,
     pub primary: Option<u64>,
     pub replica: Vec<u64>,
+    pub replica_owner: Vec<u64>,
     pub shard_type: String,
     pub options: std::collections::HashMap<String, String>,
 }

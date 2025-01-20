@@ -3,7 +3,7 @@ use std::error::Error;
 use anyerror::AnyError;
 use flare_zrpc::{
     bincode::BincodeZrpcType,
-    server::concurrent::{ServerConfig, ZrpcService},
+    server::{ServerConfig, ZrpcService},
     ZrpcClient, ZrpcError, ZrpcServiceHander,
 };
 use openraft::{

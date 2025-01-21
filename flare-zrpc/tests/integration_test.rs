@@ -46,6 +46,7 @@ async fn test_concurrent_service() {
         concurrency: 4,
         bound_channel: 0,
         accept_subfix: false,
+        ..Default::default()
     };
     let service = ConcurrentService::new(z_session.clone(), config, handler);
     let _service = service.start().await.unwrap();

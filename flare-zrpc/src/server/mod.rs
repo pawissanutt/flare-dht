@@ -51,6 +51,7 @@ pub struct ServerConfig {
     pub concurrency: u32,
     pub bound_channel: u32,
     pub accept_subfix: bool,
+    pub complete: bool,
 }
 
 impl Default for ServerConfig {
@@ -60,6 +61,7 @@ impl Default for ServerConfig {
             concurrency: 16,
             bound_channel: 0,
             accept_subfix: false,
+            complete: true,
         }
     }
 }
@@ -102,6 +104,7 @@ where
         info!("RPC server '{}': registering", key);
         self.z_session
             .declare_queryable(key.clone())
+            .complete(self.config.complete)
             .callback(move |query| tx.send(query).unwrap())
             .background()
             .await?;

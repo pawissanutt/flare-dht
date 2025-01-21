@@ -5,6 +5,7 @@ use std::marker::PhantomData;
 
 use super::ZrpcTypeConfig;
 
+#[derive(Clone)]
 pub struct ZrpcClient<C>
 where
     C: ZrpcTypeConfig,

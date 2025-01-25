@@ -12,7 +12,7 @@ use std::u32;
 
 #[async_trait::async_trait]
 pub trait MetadataManager: Send + Sync {
-    async fn initialize(&self) -> Result<(), FlareError>;
+    async fn initialize(&mut self) -> Result<(), FlareError>;
     async fn get_shard_ids(
         &self,
         col_name: &str,

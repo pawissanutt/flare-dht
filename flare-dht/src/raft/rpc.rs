@@ -146,7 +146,7 @@ impl<C: RaftTypeConfig> RaftZrpcService<C> {
         }
     }
 
-    pub async fn start(&self) -> Result<(), Box<dyn Error + Sync + Send>> {
+    pub async fn start(&mut self) -> Result<(), Box<dyn Error + Sync + Send>> {
         self.append.start().await?;
         self.vote.start().await?;
         self.snapshot.start().await?;
@@ -155,10 +155,10 @@ impl<C: RaftTypeConfig> RaftZrpcService<C> {
     }
 
     #[allow(dead_code)]
-    pub fn close(&self) {
-        self.append.close();
-        self.vote.close();
-        self.snapshot.close();
+    pub async fn close(&mut self) {
+        self.append.close().await;
+        self.vote.close().await;
+        self.snapshot.close().await;
     }
 }
 

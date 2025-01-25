@@ -17,14 +17,14 @@ bitcode = ["dep:bitcode"]
 [dependencies]
 async-trait = {workspace = true}
 zenoh = {workspace = true, features = ["unstable"]}
-zenoh-config = {workspace = true}
+# zenoh-config = {workspace = true}
 serde = {workspace = true}
 bincode = {workspace = true, optional = true}
 tokio = {workspace = true}
 tokio-util ={ workspace = true}
 thiserror = {workspace = true}
 tracing = {workspace = true}
-bytes ={workspace = true}
+# bytes ={workspace = true}
 flume ={workspace = true}
 anyerror = { version = "0.1"}
 prost = { workspace = true, optional = true}

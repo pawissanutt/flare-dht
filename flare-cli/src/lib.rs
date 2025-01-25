@@ -28,18 +28,17 @@ pub async fn start_server(
 
     let z_session = zenoh::open(zenoh::Config::default()).await.unwrap();
     let prefix = format!("flare/{}/nodes", options.cluster_id);
-
-    let metadata_manager: Arc<FlareMetadataManager> = Arc::new(
-        FlareMetadataManager::new(
-            node_id,
-            options.get_addr(),
-            options.clone(),
-            z_session.clone(),
-            &prefix,
-        )
-        .await,
-    );
+    let mut metadata_manager = FlareMetadataManager::new(
+        node_id,
+        options.get_addr(),
+        options.clone(),
+        z_session.clone(),
+        &prefix,
+    )
+    .await;
     metadata_manager.initialize().await?;
+    let metadata_manager: Arc<FlareMetadataManager> =
+        Arc::new(metadata_manager);
     let shard_manager =
         Arc::new(ShardManager::new(Box::new(HashMapShardFactory {})));
     let flare_node = FlareNode::new(

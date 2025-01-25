@@ -1,9 +1,9 @@
 use std::{error::Error, marker::PhantomData, sync::Arc};
 
 use anyerror::AnyError;
-use tokio_util::sync::CancellationToken;
+use flume::Receiver;
 use tracing::{error, info, warn};
-use zenoh::query::Query;
+use zenoh::query::{Query, Queryable};
 
 use crate::msg::MsgSerde;
 
@@ -15,34 +15,6 @@ use crate::{
 #[async_trait::async_trait]
 pub trait ZrpcServiceHander<C: ZrpcTypeConfig> {
     async fn handle(&self, req: C::In) -> Result<C::Out, C::Err>;
-}
-
-pub struct ZrpcService<T, C>
-where
-    C: ZrpcTypeConfig,
-    T: ZrpcServiceHander<C> + Send + Sync + 'static,
-{
-    z_session: zenoh::Session,
-    handler: Arc<T>,
-    token: tokio_util::sync::CancellationToken,
-    config: ServerConfig,
-    _type: PhantomData<C>,
-}
-
-impl<T, C> Clone for ZrpcService<T, C>
-where
-    C: ZrpcTypeConfig,
-    T: ZrpcServiceHander<C> + Send + Sync + 'static,
-{
-    fn clone(&self) -> Self {
-        Self {
-            z_session: self.z_session.clone(),
-            handler: self.handler.clone(),
-            token: self.token.clone(),
-            config: self.config.clone(),
-            _type: self._type.clone(),
-        }
-    }
 }
 
 #[derive(Clone)]
@@ -66,6 +38,34 @@ impl Default for ServerConfig {
     }
 }
 
+pub struct ZrpcService<T, C>
+where
+    C: ZrpcTypeConfig,
+    T: ZrpcServiceHander<C> + Send + Sync + 'static,
+{
+    z_session: zenoh::Session,
+    handler: Arc<T>,
+    config: ServerConfig,
+    queryable: Option<Queryable<Receiver<Query>>>,
+    _type: PhantomData<C>,
+}
+
+impl<T, C> Clone for ZrpcService<T, C>
+where
+    C: ZrpcTypeConfig,
+    T: ZrpcServiceHander<C> + Send + Sync + 'static,
+{
+    fn clone(&self) -> Self {
+        Self {
+            z_session: self.z_session.clone(),
+            handler: self.handler.clone(),
+            config: self.config.clone(),
+            queryable: None,
+            _type: self._type.clone(),
+        }
+    }
+}
+
 impl<T, C> ZrpcService<T, C>
 where
     C: ZrpcTypeConfig,
@@ -79,19 +79,19 @@ where
         ZrpcService {
             z_session,
             handler: Arc::new(handler),
-            token: CancellationToken::new(),
             config,
+            queryable: None,
             _type: PhantomData,
         }
     }
 
-    pub async fn start(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
+    pub async fn start(&mut self) -> Result<(), Box<dyn Error + Send + Sync>> {
         let key = if self.config.accept_subfix {
             format!("{}/**", self.config.service_id)
         } else {
             self.config.service_id.clone()
         };
-        let (tx, rx) = if self.config.bound_channel == 0 {
+        let channels = if self.config.bound_channel == 0 {
             info!("RPC server '{}': use unbounded channel", key);
             flume::unbounded()
         } else {
@@ -102,28 +102,24 @@ where
             flume::bounded(self.config.bound_channel as usize)
         };
         info!("RPC server '{}': registering", key);
-        self.z_session
+        let queryable = self
+            .z_session
             .declare_queryable(key.clone())
             .complete(self.config.complete)
-            .callback(move |query| tx.send(query).unwrap())
-            .background()
+            .with(channels)
             .await?;
+
         for _ in 0..self.config.concurrency {
-            let local_token = self.token.clone();
-            let local_rx = rx.clone();
+            // let local_token = self.token.clone();
+            let local_rx = queryable.handler().clone();
             let handler = self.handler.clone();
             let ke = key.clone();
             tokio::spawn(async move {
                 loop {
-                    tokio::select! {
-                        query_res = local_rx.recv_async() => match query_res {
-                            Ok(query) => Self::handle(&handler, query).await,
-                            Err(err) => {
-                                error!("RPC server '{}': error: {}", ke, err,);
-                                break;
-                            }
-                        },
-                        _ = local_token.cancelled() => {
+                    match local_rx.recv_async().await {
+                        Ok(query) => Self::handle(&handler, query).await,
+                        Err(err) => {
+                            error!("RPC server '{}': error: {}", ke, err,);
                             break;
                         }
                     }
@@ -131,6 +127,7 @@ where
                 info!("RPC server '{}': stoped", ke,);
             });
         }
+        self.queryable = Some(queryable);
         Ok(())
     }
 
@@ -196,7 +193,19 @@ where
     }
 
     #[inline]
-    pub fn close(&self) {
-        self.token.cancel();
+    pub fn is_serving(&self) -> bool {
+        self.queryable.is_some()
+    }
+
+    #[inline]
+    pub async fn close(&mut self) {
+        if let Some(queryable) = self.queryable.take() {
+            if let Err(err) = queryable.undeclare().await {
+                error!(
+                    "RPC server '{}': error on undeclare: {}",
+                    self.config.service_id, err
+                );
+            };
+        }
     }
 }

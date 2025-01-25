@@ -48,7 +48,8 @@ async fn test_concurrent_service() {
         accept_subfix: false,
         ..Default::default()
     };
-    let service = ConcurrentService::new(z_session.clone(), config, handler);
+    let mut service =
+        ConcurrentService::new(z_session.clone(), config, handler);
     let _service = service.start().await.unwrap();
 
     let z_session_2 = zenoh::open(zenoh::Config::default()).await.unwrap();

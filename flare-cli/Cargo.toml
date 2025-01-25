@@ -13,9 +13,9 @@ rust-version.workspace = true
 [dependencies]
 # flare-pb = {workspace = true}
 flare-dht = {workspace = true, features = ["raft", "rkyv"]}
-flare-zrpc = {workspace = true}
+# flare-zrpc = {workspace = true}
 clap = {version = "4.5", features = ["env"]}
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "net"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread",] }
 tracing = {workspace = true}
 tracing-subscriber = {workspace = true}
 tonic = {workspace=true}
@@ -23,7 +23,6 @@ tonic-reflection = { version = "0.12", features = ["server"] }
 rand = "0.8"
 async-trait = "0.1"
 zenoh = {workspace = true}
-zenoh-config = {workspace = true}
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["async_futures", "async_tokio", "html_reports", "tokio"] }

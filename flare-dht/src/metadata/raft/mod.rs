@@ -199,7 +199,7 @@ impl FlareMetadataManager {
 
 #[async_trait::async_trait]
 impl MetadataManager for FlareMetadataManager {
-    async fn initialize(&self) -> Result<(), FlareError> {
+    async fn initialize(&mut self) -> Result<(), FlareError> {
         self.rpc_service.start().await?;
         if self.flare_config.leader {
             let mut map = BTreeMap::new();

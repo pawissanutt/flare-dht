@@ -35,7 +35,7 @@ thiserror = { workspace = true }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "net"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
 tonic = { workspace = true }
-tonic-reflection = { version = "0.12", features = ["server"] }
+# tonic-reflection = { version = "0.12", features = ["server"] }
 tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
+# tracing-subscriber = { workspace = true }
 zenoh = { workspace = true }

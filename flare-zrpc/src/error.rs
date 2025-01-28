@@ -15,6 +15,8 @@ pub enum ZrpcError<E = Infallible> {
     DecodeError(AnyError),
     #[error("server error: {0}")]
     ServerSystemError(ZrpcSystemError),
+    #[error("Sender dropped")]
+    SenderDropped(#[from] flume::RecvError),
     #[error("app error: {0}")]
     AppError(E),
 }

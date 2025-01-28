@@ -21,4 +21,4 @@ publish:
      cargo publish -p flare-pb
      cargo publish -p flare-zrpc
      cargo publish -p flare-dht
-     cargo publish -p flare-cli
+     # cargo publish -p flare-cli

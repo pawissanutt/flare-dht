@@ -37,13 +37,20 @@ where
     ) -> Result<C::Out, ZrpcError<C::Err>> {
         let byte = C::InSerde::to_zbyte(&payload)
             .map_err(|e| ZrpcError::EncodeError(e))?;
+
+        let (tx, rx) = flume::bounded(1);
+
         let get_result = self
             .z_session
             .get(self.key_expr.clone())
             .payload(byte)
-            .target(zenoh::query::QueryTarget::All)
+            .target(zenoh::query::QueryTarget::BestMatching)
             .consolidation(ConsolidationMode::None)
             .congestion_control(zenoh::qos::CongestionControl::Block)
+            .with((tx, rx))
+            // .callback(move |s| {
+            //     let _ = tx.send(s);
+            // })
             .await?;
         let reply = get_result.recv_async().await?;
         match reply.result() {
@@ -80,7 +87,7 @@ where
             .z_session
             .get(self.key_expr.join(&key).unwrap())
             .payload(byte)
-            .target(zenoh::query::QueryTarget::All)
+            .target(zenoh::query::QueryTarget::BestMatching)
             .consolidation(ConsolidationMode::None)
             .congestion_control(zenoh::qos::CongestionControl::Block)
             .await?;

@@ -21,19 +21,19 @@ bytes = { version = "1.9", features = [] }
 clap = { version = "4.5", features = ["env", "derive"] }
 flare-pb = { workspace = true }
 flare-zrpc = { workspace = true }
-hashbrown = "0.15"
+hashbrown = { workspace = true }
 http = "1.2"
 mobc = "0.8"
 mur3 = "0.1"
 openraft = { version = "0.9", features = ["serde", "storage-v2"], optional = true }
 rancor = "0.1"
-rand = "0.8"
+rand = {workspace = true}
 rkyv = { version = "0.8", features = ["alloc", "std", "hashbrown-0_15"], optional = true }
 serde = { workspace = true }
-scc = { version = "2.2", features = [] }
+scc = { workspace = true }
 thiserror = { workspace = true }
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "net"] }
-tokio-stream = { version = "0.1", features = ["sync"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal", "net"] }
+tokio-stream = { workspace = true, features = ["sync"] }
 tonic = { workspace = true }
 # tonic-reflection = { version = "0.12", features = ["server"] }
 tracing = { workspace = true }

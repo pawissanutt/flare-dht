@@ -5,6 +5,12 @@ use std::marker::PhantomData;
 
 use super::ZrpcTypeConfig;
 
+#[derive(Clone, Debug)]
+pub struct ZrpcClientConfig {
+    pub service_id: String,
+    pub target: zenoh::query::QueryTarget,
+}
+
 #[derive(Clone)]
 pub struct ZrpcClient<C>
 where
@@ -12,6 +18,7 @@ where
 {
     key_expr: KeyExpr<'static>,
     z_session: zenoh::Session,
+    config: ZrpcClientConfig,
     _conf: PhantomData<C>,
 }
 
@@ -21,12 +28,32 @@ where
 {
     pub async fn new(service_id: String, z_session: zenoh::Session) -> Self {
         let key_expr = z_session
-            .declare_keyexpr(service_id)
+            .declare_keyexpr(service_id.clone())
             .await
             .expect("Declare key_expr for zenoh");
         Self {
             key_expr,
             z_session,
+            config: ZrpcClientConfig {
+                service_id,
+                target: zenoh::query::QueryTarget::BestMatching,
+            },
+            _conf: PhantomData,
+        }
+    }
+
+    pub async fn with_config(
+        config: ZrpcClientConfig,
+        z_session: zenoh::Session,
+    ) -> Self {
+        let key_expr = z_session
+            .declare_keyexpr(config.service_id.clone())
+            .await
+            .expect("Declare key_expr for zenoh");
+        Self {
+            key_expr,
+            z_session,
+            config,
             _conf: PhantomData,
         }
     }
@@ -44,7 +71,7 @@ where
             .z_session
             .get(self.key_expr.clone())
             .payload(byte)
-            .target(zenoh::query::QueryTarget::BestMatching)
+            .target(self.config.target)
             .consolidation(ConsolidationMode::None)
             .congestion_control(zenoh::qos::CongestionControl::Block)
             .with((tx, rx))
@@ -83,13 +110,17 @@ where
     ) -> Result<C::Out, ZrpcError<C::Err>> {
         let byte = C::InSerde::to_zbyte(&payload)
             .map_err(|e| ZrpcError::EncodeError(e))?;
+
+        let chan = flume::bounded(1);
+
         let get_result = self
             .z_session
             .get(self.key_expr.join(&key).unwrap())
             .payload(byte)
-            .target(zenoh::query::QueryTarget::BestMatching)
+            .target(self.config.target)
             .consolidation(ConsolidationMode::None)
             .congestion_control(zenoh::qos::CongestionControl::Block)
+            .with(chan)
             .await?;
         let reply = get_result.recv_async().await?;
         match reply.result() {

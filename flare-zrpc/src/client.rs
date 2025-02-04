@@ -1,4 +1,6 @@
-use zenoh::{key_expr::KeyExpr, query::ConsolidationMode};
+use zenoh::{
+    key_expr::KeyExpr, qos::CongestionControl, query::ConsolidationMode,
+};
 
 use crate::{msg::MsgSerde, ZrpcError};
 use std::marker::PhantomData;
@@ -9,6 +11,7 @@ use super::ZrpcTypeConfig;
 pub struct ZrpcClientConfig {
     pub service_id: String,
     pub target: zenoh::query::QueryTarget,
+    pub channel_size: usize,
 }
 
 #[derive(Clone)]
@@ -37,6 +40,7 @@ where
             config: ZrpcClientConfig {
                 service_id,
                 target: zenoh::query::QueryTarget::BestMatching,
+                channel_size: 1,
             },
             _conf: PhantomData,
         }
@@ -65,21 +69,21 @@ where
         let byte = C::InSerde::to_zbyte(&payload)
             .map_err(|e| ZrpcError::EncodeError(e))?;
 
-        let (tx, rx) = flume::bounded(1);
+        let (tx, rx) = flume::bounded(self.config.channel_size);
 
-        let get_result = self
+        let _ = self
             .z_session
             .get(self.key_expr.clone())
             .payload(byte)
             .target(self.config.target)
             .consolidation(ConsolidationMode::None)
-            .congestion_control(zenoh::qos::CongestionControl::Block)
-            .with((tx, rx))
-            // .callback(move |s| {
-            //     let _ = tx.send(s);
-            // })
+            .congestion_control(CongestionControl::Block)
+            // .with((tx, rx))
+            .callback(move |s| {
+                let _ = tx.send(s);
+            })
             .await?;
-        let reply = get_result.recv_async().await?;
+        let reply = rx.recv_async().await?;
         match reply.result() {
             Ok(sample) => {
                 let res = C::OutSerde::from_zbyte(sample.payload())
@@ -111,18 +115,20 @@ where
         let byte = C::InSerde::to_zbyte(&payload)
             .map_err(|e| ZrpcError::EncodeError(e))?;
 
-        let chan = flume::bounded(1);
+        let (tx, rx) = flume::bounded(self.config.channel_size);
 
-        let get_result = self
-            .z_session
+        self.z_session
             .get(self.key_expr.join(&key).unwrap())
             .payload(byte)
             .target(self.config.target)
             .consolidation(ConsolidationMode::None)
-            .congestion_control(zenoh::qos::CongestionControl::Block)
-            .with(chan)
+            .congestion_control(CongestionControl::Block)
+            .callback(move |s| {
+                let _ = tx.send(s);
+            })
             .await?;
-        let reply = get_result.recv_async().await?;
+
+        let reply = rx.recv_async().await?;
         match reply.result() {
             Ok(sample) => {
                 let res = C::OutSerde::from_zbyte(sample.payload())

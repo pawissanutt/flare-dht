@@ -3,6 +3,7 @@ use std::error::Error;
 use anyerror::AnyError;
 use flare_zrpc::{
     bincode::BincodeZrpcType,
+    client::ZrpcClientConfig,
     server::{ServerConfig, ZrpcService},
     ZrpcClient, ZrpcError, ZrpcServiceHander,
 };
@@ -165,13 +166,31 @@ impl<C: RaftTypeConfig> RaftZrpcService<C> {
 pub struct Network {
     z_session: Session,
     rpc_prefix: String,
+    config: ZrpcClientConfig,
 }
 
 impl Network {
     pub fn new(z_session: Session, rpc_prefix: String) -> Self {
         Network {
             z_session,
+            config: ZrpcClientConfig {
+                service_id: rpc_prefix.clone(),
+                target: zenoh::query::QueryTarget::BestMatching,
+                channel_size: 1,
+            },
             rpc_prefix,
+        }
+    }
+
+    pub fn new_with_config(
+        z_session: Session,
+        rpc_prefix: String,
+        config: ZrpcClientConfig,
+    ) -> Self {
+        Network {
+            z_session,
+            rpc_prefix,
+            config,
         }
     }
 }
@@ -188,6 +207,7 @@ impl<C: RaftTypeConfig> RaftNetworkFactory<C> for Network {
             self.z_session.clone(),
             self.rpc_prefix.clone(),
             target,
+            self.config.clone(),
         )
         .await
     }
@@ -215,20 +235,30 @@ impl<C: RaftTypeConfig> NetworkConnection<C> {
         z_session: Session,
         rpc_prefix: String,
         target: C::NodeId,
+        config: ZrpcClientConfig,
     ) -> Self {
-        let append_client = AppendClient::new(
-            format!("{rpc_prefix}/raft-append/{target}"),
+        let append_client = AppendClient::with_config(
+            ZrpcClientConfig {
+                service_id: format!("{rpc_prefix}/raft-append/{target}"),
+                ..config
+            },
             z_session.clone(),
         )
         .await;
-        let vote_client = VoteClient::<C>::new(
-            format!("{rpc_prefix}/raft-vote/{target}"),
+        let vote_client = VoteClient::<C>::with_config(
+            ZrpcClientConfig {
+                service_id: format!("{rpc_prefix}/raft-vote/{target}"),
+                ..config
+            },
             z_session.clone(),
         )
         .await;
 
-        let snapshot_client = InstallSnapshotClient::new(
-            format!("{rpc_prefix}/raft-snapshot/{target}"),
+        let snapshot_client = InstallSnapshotClient::with_config(
+            ZrpcClientConfig {
+                service_id: format!("{rpc_prefix}/raft-snapshot/{target}"),
+                ..config
+            },
             z_session.clone(),
         )
         .await;

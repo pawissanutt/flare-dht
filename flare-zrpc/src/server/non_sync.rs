@@ -2,7 +2,7 @@ use std::{error::Error, marker::PhantomData};
 
 use anyerror::AnyError;
 use flume::Receiver;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 use zenoh::query::{Query, Queryable};
 
 use crate::{ZrpcServerError, ZrpcSystemError, ZrpcTypeConfig};
@@ -99,12 +99,11 @@ where
                             handler = Self::handle(handler, query).await
                         }
                         Err(err) => {
-                            error!("RPC server '{}': error: {}", ke, err,);
+                            debug!("RPC server '{}': error: {}", ke, err,);
                             break;
                         }
                     }
                 }
-                info!("RPC server '{}': stoped", ke,);
             });
         }
         self.queryable = Some(queryable);

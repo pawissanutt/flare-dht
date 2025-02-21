@@ -4,49 +4,49 @@ use crate::{error::ZrpcServerError, MsgSerde, ZrpcTypeConfig};
 use anyerror::AnyError;
 use zenoh::bytes::ZBytes;
 
-// pub struct BincodeZrpcType<I, O, E>
-// where
-//     I: Send + Sync,
-//     O: Send + Sync,
-//     E: Send + Sync,
-// {
-//     _i: PhantomData<I>,
-//     _o: PhantomData<O>,
-//     _e: PhantomData<E>,
-// }
+pub struct BitcodeZrpcType<I, O, E>
+where
+    I: Send + Sync + serde::Serialize + serde::de::DeserializeOwned,
+    O: Send + Sync + serde::Serialize + serde::de::DeserializeOwned,
+    E: Send + Sync + serde::Serialize + serde::de::DeserializeOwned,
+{
+    _i: PhantomData<I>,
+    _o: PhantomData<O>,
+    _e: PhantomData<E>,
+}
 
-// impl<I, O, E> ZrpcTypeConfig for BincodeZrpcType<I, O, E>
-// where
-//     I: Send + Sync + serde::Serialize + serde::de::DeserializeOwned,
-//     O: Send + Sync + serde::Serialize + serde::de::DeserializeOwned,
-//     E: Send + Sync + serde::Serialize + serde::de::DeserializeOwned,
-// {
-//     type In = I;
-//     type Out = O;
-//     type Err = E;
-//     type Wrapper = ZrpcServerError<E>;
-//     type InSerde = BincodeMsgSerde<I>;
-//     type OutSerde = BincodeMsgSerde<O>;
-//     type ErrSerde = BincodeMsgSerde<Self::Wrapper>;
+impl<I, O, E> ZrpcTypeConfig for BitcodeZrpcType<I, O, E>
+where
+    I: Send + Sync + serde::Serialize + serde::de::DeserializeOwned,
+    O: Send + Sync + serde::Serialize + serde::de::DeserializeOwned,
+    E: Send + Sync + serde::Serialize + serde::de::DeserializeOwned,
+{
+    type In = I;
+    type Out = O;
+    type Err = E;
+    type Wrapper = ZrpcServerError<E>;
+    type InSerde = BitcodeMsgSerde<I>;
+    type OutSerde = BitcodeMsgSerde<O>;
+    type ErrSerde = BitcodeMsgSerde<Self::Wrapper>;
 
-//     fn wrap(output: ZrpcServerError<Self::Err>) -> Self::Wrapper {
-//         output
-//     }
+    fn wrap(output: ZrpcServerError<Self::Err>) -> Self::Wrapper {
+        output
+    }
 
-//     fn unwrap(wrapper: Self::Wrapper) -> ZrpcServerError<Self::Err> {
-//         wrapper
-//     }
-// }
+    fn unwrap(wrapper: Self::Wrapper) -> ZrpcServerError<Self::Err> {
+        wrapper
+    }
+}
 
 #[derive(Clone)]
-pub struct BincodeMsgSerde<T>
+pub struct BitcodeMsgSerde<T>
 where
     T: serde::Serialize + serde::de::DeserializeOwned + Send + Sync,
 {
     _data: PhantomData<T>,
 }
 
-impl<T> MsgSerde for BincodeMsgSerde<T>
+impl<T> MsgSerde for BitcodeMsgSerde<T>
 where
     T: serde::Serialize + serde::de::DeserializeOwned + Send + Sync,
 {

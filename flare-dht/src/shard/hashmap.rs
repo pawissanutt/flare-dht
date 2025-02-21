@@ -29,25 +29,6 @@ impl KvShard for HashMapShard {
         Ok(out)
     }
 
-    // async fn modify<F, O>(&self, key: &Self::Key, f: F) -> Result<O, FlareError>
-    // where
-    //     F: FnOnce(&mut Self::Entry) -> O + Send,
-    // {
-    //     let out = match self.map.entry_async(key.clone()).await {
-    //         Occupied(mut occupied_entry) => {
-    //             let entry = occupied_entry.get_mut();
-    //             f(entry)
-    //         }
-    //         Vacant(vacant_entry) => {
-    //             let mut entry = Self::Entry::default();
-    //             let o = f(&mut entry);
-    //             vacant_entry.insert_entry(entry);
-    //             o
-    //         }
-    //     };
-    //     Ok(out)
-    // }
-
     async fn set(
         &self,
         key: String,

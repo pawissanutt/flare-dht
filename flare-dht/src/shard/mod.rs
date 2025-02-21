@@ -71,14 +71,6 @@ pub trait KvShard: Send + Sync {
         key: &Self::Key,
     ) -> Result<Option<Self::Entry>, FlareError>;
 
-    // async fn modify<F, O>(
-    //     &self,
-    //     key: &Self::Key,
-    //     f: F,
-    // ) -> Result<O, FlareError>
-    // where
-    //     F: FnOnce(&mut Self::Entry) -> O + Send;
-
     async fn merge(
         &self,
         key: Self::Key,

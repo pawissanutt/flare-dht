@@ -11,6 +11,7 @@ license.workspace = true
 "rpc-server" = []
 "raft" = ["dep:openraft"]
 "rkyv" = ["dep:rkyv"]
+"serde" = []
 
 [dependencies]
 # dashmap = "6.1"

@@ -111,32 +111,33 @@ impl<C: RaftTypeConfig> RaftZrpcService<C> {
         z_session: Session,
         rpc_prefix: String,
         node_id: C::NodeId,
+        conf: ServerConfig,
     ) -> Self {
-        let conf = ServerConfig {
+        let append_conf = ServerConfig {
             service_id: format!("{rpc_prefix}/raft-append/{node_id}"),
-            ..Default::default()
+            ..conf
         };
         let append = AppendService::new(
             z_session.clone(),
-            conf,
+            append_conf,
             AppendHandler { raft: raft.clone() },
         );
-        let conf = ServerConfig {
+        let vote_conf = ServerConfig {
             service_id: format!("{rpc_prefix}/raft-vote/{node_id}"),
-            ..Default::default()
+            ..conf
         };
         let vote = VoteService::new(
             z_session.clone(),
-            conf,
+            vote_conf,
             VoteHandler { raft: raft.clone() },
         );
-        let conf = ServerConfig {
+        let snapshot_conf = ServerConfig {
             service_id: format!("{rpc_prefix}/raft-snapshot/{node_id}"),
-            ..Default::default()
+            ..conf
         };
         let snapshot = SnapshotService::new(
             z_session.clone(),
-            conf,
+            snapshot_conf,
             InstallSnapshotHandler { raft: raft.clone() },
         );
 

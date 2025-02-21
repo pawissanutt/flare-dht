@@ -6,9 +6,9 @@ use zenoh::bytes::ZBytes;
 
 pub struct BincodeZrpcType<I, O, E>
 where
-    I: Send + Sync,
-    O: Send + Sync,
-    E: Send + Sync,
+    I: Send + Sync + serde::Serialize + serde::de::DeserializeOwned,
+    O: Send + Sync + serde::Serialize + serde::de::DeserializeOwned,
+    E: Send + Sync + serde::Serialize + serde::de::DeserializeOwned,
 {
     _i: PhantomData<I>,
     _o: PhantomData<O>,

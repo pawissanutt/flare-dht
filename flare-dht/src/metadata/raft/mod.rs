@@ -4,6 +4,7 @@ mod test;
 
 use flare_pb::flare_control_client::FlareControlClient;
 use flare_pb::{ShardAssignment, ShardGroup};
+use flare_zrpc::server::ServerConfig;
 use http::Uri;
 use openraft::{BasicNode, ChangeMembers, Config};
 use state_machine::FlareMetadataSM;
@@ -123,6 +124,10 @@ impl FlareMetadataManager {
             z_session,
             rpc_prefix.into(),
             node_id,
+            ServerConfig {
+                concurrency: 2,
+                ..Default::default()
+            },
         );
 
         FlareMetadataManager {

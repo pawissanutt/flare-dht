@@ -91,12 +91,13 @@ where
             let local_rx = queryable.handler().clone();
             let handler = self.handler.clone();
             let ke = key.clone();
+            let conf = self.config.clone();
             tokio::spawn(async move {
                 let mut handler = handler;
                 loop {
                     match local_rx.recv_async().await {
                         Ok(query) => {
-                            handler = Self::handle(handler, query).await
+                            handler = Self::handle(handler, query, &conf).await
                         }
                         Err(err) => {
                             debug!("RPC server '{}': error: {}", ke, err,);
@@ -110,10 +111,10 @@ where
         Ok(())
     }
 
-    async fn handle(handler: T, query: Query) -> T {
+    async fn handle(handler: T, query: Query, conf: &ServerConfig) -> T {
         if let Some(payload) = query.payload() {
             match C::InSerde::from_zbyte(payload) {
-                Ok(data) => Self::run_handler(handler, query, data).await,
+                Ok(data) => Self::run_handler(handler, query, data, conf).await,
                 Err(err) => {
                     let zse = ZrpcSystemError::DecodeError(AnyError::new(&err));
                     Self::write_error(ZrpcServerError::SystemError(zse), query)
@@ -130,11 +131,16 @@ where
         }
     }
 
-    async fn run_handler(handler: T, query: Query, payload: C::In) -> T {
+    async fn run_handler(
+        handler: T,
+        query: Query,
+        payload: C::In,
+        conf: &ServerConfig,
+    ) -> T {
         let mut handler = handler;
         let result = handler.handle(payload).await;
         match result {
-            Ok(ok) => Self::write_output(ok, query).await,
+            Ok(ok) => Self::write_output(ok, query, conf).await,
             Err(err) => {
                 Self::write_error(ZrpcServerError::AppError(err), query).await
             }
@@ -142,11 +148,15 @@ where
         handler
     }
 
-    async fn write_output(out: C::Out, query: Query) {
+    async fn write_output(out: C::Out, query: Query, conf: &ServerConfig) {
         match C::OutSerde::to_zbyte(&out) {
             Ok(byte) => {
                 let reply_key = query.key_expr();
-                if let Err(e) = query.reply(reply_key, byte).await {
+                if let Err(e) = query
+                    .reply(reply_key, byte)
+                    .congestion_control(conf.reply_congestion)
+                    .await
+                {
                     warn!(
                         "RPC server: error on replying '{}', {}",
                         query.key_expr(),

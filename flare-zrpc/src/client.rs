@@ -1,8 +1,10 @@
 use zenoh::{
-    key_expr::KeyExpr, qos::CongestionControl, query::ConsolidationMode,
+    key_expr::KeyExpr,
+    qos::CongestionControl,
+    query::{ConsolidationMode, QueryTarget},
 };
 
-use crate::{msg::MsgSerde, ZrpcError};
+use crate::{ZrpcError, msg::MsgSerde};
 use std::marker::PhantomData;
 
 use super::ZrpcTypeConfig;
@@ -10,8 +12,9 @@ use super::ZrpcTypeConfig;
 #[derive(Clone, Debug)]
 pub struct ZrpcClientConfig {
     pub service_id: String,
-    pub target: zenoh::query::QueryTarget,
+    pub target: QueryTarget,
     pub channel_size: usize,
+    pub congestion_control: CongestionControl,
 }
 
 #[derive(Clone)]
@@ -39,8 +42,9 @@ where
             z_session,
             config: ZrpcClientConfig {
                 service_id,
-                target: zenoh::query::QueryTarget::BestMatching,
+                target: QueryTarget::BestMatching,
                 channel_size: 1,
+                congestion_control: CongestionControl::Block,
             },
             _conf: PhantomData,
         }
@@ -122,7 +126,7 @@ where
             .payload(byte)
             .target(self.config.target)
             .consolidation(ConsolidationMode::None)
-            .congestion_control(CongestionControl::Block)
+            .congestion_control(self.config.congestion_control)
             .callback(move |s| {
                 let _ = tx.send(s);
             })

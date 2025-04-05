@@ -1,14 +1,15 @@
 use anyhow::Ok;
 use clap::Parser;
 use rlt::{
+    IterReport,
     cli::BenchCli,
-    IterReport, {BenchSuite, IterInfo},
+    {BenchSuite, IterInfo},
 };
 use tokio::time::Instant;
 use tonic::transport::{Channel, Uri};
 
 use flare_dht::proto::SetRequest;
-use flare_dht::proto::{flare_kv_client::FlareKvClient, SingleKeyRequest};
+use flare_dht::proto::{SingleKeyRequest, flare_kv_client::FlareKvClient};
 use rand::Rng;
 
 #[derive(Parser, Clone)]
@@ -36,8 +37,8 @@ struct HttpBench {
 
 impl HttpBench {
     fn new(url: Uri, size: usize, get_count: u64) -> Self {
-        let value: Vec<u8> = rand::thread_rng()
-            .sample_iter(&rand::distributions::Alphanumeric)
+        let value: Vec<u8> = rand::rng()
+            .sample_iter(&rand::distr::Alphanumeric)
             .take(size)
             .map(u8::from)
             .collect();
@@ -121,5 +122,6 @@ impl BenchSuite for HttpBench {
 async fn main() -> anyhow::Result<()> {
     let opts: Opts = Opts::parse();
     let bench = HttpBench::new(opts.url, opts.size, opts.get_count);
-    rlt::cli::run(opts.bench_opts, bench).await
+    rlt::cli::run(opts.bench_opts, bench).await;
+    Ok(())
 }

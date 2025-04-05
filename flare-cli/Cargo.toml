@@ -19,14 +19,14 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread",] }
 tracing = {workspace = true}
 tracing-subscriber = {workspace = true}
 tonic = {workspace=true}
-tonic-reflection = { version = "0.12", features = ["server"] }
-rand = "0.8"
+tonic-reflection = { workspace = true, features = ["server"] }
+rand = "0.9"
 async-trait = "0.1"
 zenoh = {workspace = true}
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["async_futures", "async_tokio", "html_reports", "tokio"] }
-rlt = {version = "0.2.0"}
+rlt = {workspace = true}
 anyhow = "1.0"
 tsid = "0.3"
 

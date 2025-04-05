@@ -2,12 +2,13 @@ use std::error::Error;
 
 use anyerror::AnyError;
 use flare_zrpc::{
+    ZrpcClient, ZrpcError, ZrpcServiceHander,
     bincode::BincodeZrpcType,
     client::ZrpcClientConfig,
     server::{ServerConfig, ZrpcService},
-    ZrpcClient, ZrpcError, ZrpcServiceHander,
 };
 use openraft::{
+    Raft, RaftNetwork, RaftNetworkFactory, RaftTypeConfig,
     error::{
         InstallSnapshotError, NetworkError, RPCError, RaftError, RemoteError,
         Unreachable,
@@ -17,7 +18,6 @@ use openraft::{
         AppendEntriesRequest, AppendEntriesResponse, InstallSnapshotRequest,
         InstallSnapshotResponse, VoteRequest, VoteResponse,
     },
-    Raft, RaftNetwork, RaftNetworkFactory, RaftTypeConfig,
 };
 use zenoh::Session;
 
@@ -178,6 +178,7 @@ impl Network {
                 service_id: rpc_prefix.clone(),
                 target: zenoh::query::QueryTarget::BestMatching,
                 channel_size: 1,
+                congestion_control: zenoh::qos::CongestionControl::Block,
             },
             rpc_prefix,
         }

@@ -122,6 +122,6 @@ impl BenchSuite for HttpBench {
 async fn main() -> anyhow::Result<()> {
     let opts: Opts = Opts::parse();
     let bench = HttpBench::new(opts.url, opts.size, opts.get_count);
-    rlt::cli::run(opts.bench_opts, bench).await;
+    let _ = rlt::cli::run(opts.bench_opts, bench).await;
     Ok(())
 }

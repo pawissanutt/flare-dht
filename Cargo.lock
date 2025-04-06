@@ -1138,7 +1138,6 @@ name = "flare-pb"
 version = "0.1.28"
 dependencies = [
  "prost",
- "prost-types",
  "serde",
  "tonic",
  "tonic-build",
@@ -1159,7 +1158,6 @@ dependencies = [
  "serde",
  "thiserror 2.0.12",
  "tokio",
- "tokio-util",
  "tracing",
  "tracing-test",
  "zenoh",

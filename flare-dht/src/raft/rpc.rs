@@ -179,6 +179,7 @@ impl Network {
                 target: zenoh::query::QueryTarget::BestMatching,
                 channel_size: 1,
                 congestion_control: zenoh::qos::CongestionControl::Block,
+                ..Default::default()
             },
             rpc_prefix,
         }

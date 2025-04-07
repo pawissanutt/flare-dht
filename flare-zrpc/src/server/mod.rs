@@ -12,8 +12,9 @@ pub struct ServerConfig {
     pub concurrency: u32,
     pub bound_channel: u32,
     pub accept_subfix: bool,
-    pub reply_congestion: zenoh::qos::CongestionControl,
     pub complete: bool,
+    pub reply_congestion: zenoh::qos::CongestionControl,
+    pub reply_priority: zenoh::qos::Priority,
 }
 
 impl Default for ServerConfig {
@@ -25,6 +26,7 @@ impl Default for ServerConfig {
             accept_subfix: false,
             complete: true,
             reply_congestion: zenoh::qos::CongestionControl::Block,
+            reply_priority: zenoh::qos::Priority::default(),
         }
     }
 }

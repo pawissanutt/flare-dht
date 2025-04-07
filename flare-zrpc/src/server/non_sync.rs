@@ -155,6 +155,7 @@ where
                 if let Err(e) = query
                     .reply(reply_key, byte)
                     .congestion_control(conf.reply_congestion)
+                    .priority(conf.reply_priority)
                     .await
                 {
                     warn!(

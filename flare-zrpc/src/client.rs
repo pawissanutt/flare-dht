@@ -1,6 +1,6 @@
 use zenoh::{
     key_expr::KeyExpr,
-    qos::CongestionControl,
+    qos::{CongestionControl, Priority},
     query::{ConsolidationMode, QueryTarget},
 };
 
@@ -15,6 +15,19 @@ pub struct ZrpcClientConfig {
     pub target: QueryTarget,
     pub channel_size: usize,
     pub congestion_control: CongestionControl,
+    pub priority: Priority,
+}
+
+impl Default for ZrpcClientConfig {
+    fn default() -> Self {
+        Self {
+            service_id: Default::default(),
+            target: QueryTarget::BestMatching,
+            channel_size: 1,
+            congestion_control: CongestionControl::Block,
+            priority: Priority::default(),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -45,6 +58,7 @@ where
                 target: QueryTarget::BestMatching,
                 channel_size: 1,
                 congestion_control: CongestionControl::Block,
+                priority: Priority::default(),
             },
             _conf: PhantomData,
         }
@@ -81,7 +95,8 @@ where
             .payload(byte)
             .target(self.config.target)
             .consolidation(ConsolidationMode::None)
-            .congestion_control(CongestionControl::Block)
+            .congestion_control(self.config.congestion_control)
+            .priority(self.config.priority)
             // .with((tx, rx))
             .callback(move |s| {
                 let _ = tx.send(s);
@@ -127,6 +142,7 @@ where
             .target(self.config.target)
             .consolidation(ConsolidationMode::None)
             .congestion_control(self.config.congestion_control)
+            .priority(self.config.priority)
             .callback(move |s| {
                 let _ = tx.send(s);
             })
